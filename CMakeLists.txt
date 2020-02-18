@@ -48,11 +48,23 @@ set(SOURCE_FILES
 	src/utilities/General.cpp
 	src/VoxelReconstruction.cpp)
 
-# Tell cmake to copy data files in order to include them
-set(ASSETS
-	data/cam1/video.avi
-)
-foreach(asset ${ASSETS})
+#############################################
+# Videos are at 50 FPS so step by 50 frames for one capture per second to save time
+# as the videos are on the order of minutes long.
+set(CALIBRATION_FRAME_STEP 50 CACHE STRING "How many subsequent frames to skip during calibration")
+# Set each data file needed as a "source file" then tell cmake how those files
+# are generated. For some, it is only a matter of copying. For others, it requires
+# one of the apps to run to generate the dependency files. CMake will take care
+# of the dependencies.
+foreach(CAMERA cam1 cam2 cam3 cam4)
+	list(APPEND VIDEOS data/${CAMERA}/video.avi)
+	list(APPEND VIDEOS data/${CAMERA}/checkerboard.avi)
+	list(APPEND BACKGROUNDS data/${CAMERA}/background.avi)
+	list(APPEND INTRINSICS data/${CAMERA}/intrinsics.avi)
+endforeach()
+
+# Tell cmake to copy video files in order to include them
+foreach(asset ${VIDEOS})
 	get_filename_component(asset_name ${asset} NAME)
 	get_filename_component(asset_directory ${asset} DIRECTORY)
 	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name})
@@ -66,9 +78,6 @@ foreach(asset ${ASSETS})
 endforeach()
 
 # Tell cmake to generate background.png files
-set(BACKGROUNDS
-	data/cam1/background.avi
-)
 foreach(asset ${BACKGROUNDS})
 	get_filename_component(asset_name_we ${asset} NAME_WE)
 	get_filename_component(asset_directory ${asset} DIRECTORY)
@@ -83,10 +92,6 @@ foreach(asset ${BACKGROUNDS})
 endforeach()
 
 # Tell cmake to generate intrinsics.xml files
-set(INTRINSICS
-	data/cam1/intrinsics.avi
-)
-set(CALIBRATION_FRAME_STEP 10 CACHE STRING "How many subsequent frames to skip during calibration")
 foreach(asset ${INTRINSICS})
 	get_filename_component(asset_name_we ${asset} NAME_WE)
 	get_filename_component(asset_directory ${asset} DIRECTORY)
@@ -100,6 +105,7 @@ foreach(asset ${INTRINSICS})
 	list(APPEND SOURCE_FILES ${asset_output})
 endforeach()
 
+#############################################
 add_executable (${CMAKE_PROJECT_NAME} ${SOURCE_FILES} ${ASSETS})
 
 #############################################
