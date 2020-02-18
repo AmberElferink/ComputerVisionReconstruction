@@ -36,6 +36,8 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 # 
 # #############################################
 
+add_subdirectory(apps)
+
 set(SOURCE_FILES
 	src/controllers/arcball.cpp
 	src/controllers/Camera.cpp
@@ -53,12 +55,28 @@ set(ASSETS
 foreach(asset ${ASSETS})
 	get_filename_component(asset_name ${asset} NAME)
 	get_filename_component(asset_directory ${asset} DIRECTORY)
-	message(${asset_name})
 	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name})
 	add_custom_command(
 		OUTPUT ${asset_output}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output}
+		DEPENDS ${asset}
+	)
+	list(APPEND SOURCE_FILES ${asset_output})
+endforeach()
+
+# Tell cmake to generate background.png files
+set(BACKGROUNDS
+	data/cam1/background.avi
+)
+foreach(asset ${BACKGROUNDS})
+	get_filename_component(asset_name_we ${asset} NAME_WE)
+	get_filename_component(asset_directory ${asset} DIRECTORY)
+	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name_we}.png)
+	add_custom_command(
+		OUTPUT ${asset_output}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND  background_averager ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output}
 		DEPENDS ${asset}
 	)
 	list(APPEND SOURCE_FILES ${asset_output})
