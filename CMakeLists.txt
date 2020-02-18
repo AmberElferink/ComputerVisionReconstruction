@@ -76,8 +76,26 @@ foreach(asset ${BACKGROUNDS})
 	add_custom_command(
 		OUTPUT ${asset_output}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
-		COMMAND  background_averager ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output}
+		COMMAND background_averager ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output}
 		DEPENDS ${asset}
+	)
+	list(APPEND SOURCE_FILES ${asset_output})
+endforeach()
+
+# Tell cmake to generate intrinsics.xml files
+set(INTRINSICS
+	data/cam1/intrinsics.avi
+)
+set(CALIBRATION_FRAME_STEP 10 CACHE STRING "How many subsequent frames to skip during calibration")
+foreach(asset ${INTRINSICS})
+	get_filename_component(asset_name_we ${asset} NAME_WE)
+	get_filename_component(asset_directory ${asset} DIRECTORY)
+	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/intrinsics.xml)
+	add_custom_command(
+		OUTPUT ${asset_output}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND camera_calibrator ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output} ${CALIBRATION_FRAME_STEP}
+		DEPENDS ${asset} data/checkerboard.xml
 	)
 	list(APPEND SOURCE_FILES ${asset_output})
 endforeach()
