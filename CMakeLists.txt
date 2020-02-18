@@ -56,15 +56,16 @@ set(CALIBRATION_FRAME_STEP 50 CACHE STRING "How many subsequent frames to skip d
 # are generated. For some, it is only a matter of copying. For others, it requires
 # one of the apps to run to generate the dependency files. CMake will take care
 # of the dependencies.
+list(APPEND FILES_TO_COPY data/checkerboard.xml)
 foreach(CAMERA cam1 cam2 cam3 cam4)
-	list(APPEND VIDEOS data/${CAMERA}/video.avi)
-	list(APPEND VIDEOS data/${CAMERA}/checkerboard.avi)
+	list(APPEND FILES_TO_COPY data/${CAMERA}/video.avi)
+	list(APPEND FILES_TO_COPY data/${CAMERA}/checkerboard.avi)
 	list(APPEND BACKGROUNDS data/${CAMERA}/background.avi)
 	list(APPEND INTRINSICS data/${CAMERA}/intrinsics.avi)
 endforeach()
 
 # Tell cmake to copy video files in order to include them
-foreach(asset ${VIDEOS})
+foreach(asset ${FILES_TO_COPY})
 	get_filename_component(asset_name ${asset} NAME)
 	get_filename_component(asset_directory ${asset} DIRECTORY)
 	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name})
