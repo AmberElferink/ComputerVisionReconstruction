@@ -17,6 +17,7 @@
 #include <GL/glut.h>
 #include <GL/glu.h>
 #endif
+#include "ArcBall.h"
 
 // i am not sure about the compatibility with this...
 #define MOUSE_WHEEL_UP   3
@@ -30,6 +31,7 @@ class Scene3DRenderer;
 class Glut
 {
 	Scene3DRenderer &m_scene3d;
+	ArcBall m_arc_ball;
 
 	static Glut* m_Glut;
 

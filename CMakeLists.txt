@@ -20,6 +20,7 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 # add_definitions(-DTIXML_USE_TICPP)
 
 find_package(GLUT REQUIRED)
+find_package(glm REQUIRED)
 find_package(OpenGL 1 REQUIRED)
 find_package(OpenCV COMPONENTS core highgui imgproc calib3d REQUIRED)
 find_package(Threads)
@@ -39,7 +40,7 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 add_subdirectory(apps)
 
 set(SOURCE_FILES
-	src/controllers/arcball.cpp
+	src/controllers/ArcBall.cpp
 	src/controllers/Camera.cpp
 	src/controllers/Glut.cpp
 	src/controllers/Reconstructor.cpp
@@ -114,6 +115,7 @@ add_executable (${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
 #############################################
 target_link_libraries (${CMAKE_PROJECT_NAME}
 	PRIVATE
+		glm
 		OpenGL::GL
 		OpenGL::GLU
 		GLUT::GLUT

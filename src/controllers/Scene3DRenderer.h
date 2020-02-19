@@ -8,6 +8,7 @@
 #ifndef SCENE3DRENDERER_H_
 #define SCENE3DRENDERER_H_
 
+#include <glm/vec3.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/operations.hpp>
 #include <vector>
@@ -15,7 +16,7 @@
 #include <Windows.h>
 #endif
 
-#include "arcball.h"
+#include "ArcBall.h"
 #include "Camera.h"
 #include "Reconstructor.h"
 #include "ForegroundOptimizer.h"
@@ -41,9 +42,9 @@ class Scene3DRenderer
 	 * Three vectors for the arcball that allows for manipulating the scene with
 	 * the mouse like a globe
 	 */
-	vec m_arcball_eye;                        // arcball "eye" vector
-	vec m_arcball_centre;                     // arcball "centre" vector
-	vec m_arcball_up;                         // arcball "up" vector
+	glm::vec3 m_arcball_eye;                        // arcball "eye" vector
+	glm::vec3 m_arcball_centre;                     // arcball "centre" vector
+	glm::vec3 m_arcball_up;                         // arcball "up" vector
 
 	bool m_camera_view;                       // flag if scene viewed from a camera
 	bool m_show_volume;                       // flag draw half-space edges
@@ -289,17 +290,17 @@ public:
 		m_aspect_ratio = a;
 	}
 
-	const vec& getArcballCentre() const
+	const glm::vec3& getArcballCentre() const
 	{
 		return m_arcball_centre;
 	}
 
-	const vec& getArcballEye() const
+	const glm::vec3& getArcballEye() const
 	{
 		return m_arcball_eye;
 	}
 
-	const vec& getArcballUp() const
+	const glm::vec3& getArcballUp() const
 	{
 		return m_arcball_up;
 	}

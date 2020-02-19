@@ -228,9 +228,9 @@ void Scene3DRenderer::setTopView()
 		m_previous_camera = m_current_camera;
 	m_current_camera = -1;
 
-	m_arcball_eye = vec(0.0f, 0.0f, 10000.0f);
-	m_arcball_centre = vec(0.0f, 0.0f, 0.0f);
-	m_arcball_up = vec(0.0f, 1.0f, 0.0f);
+	m_arcball_eye = glm::vec3(0.0f, 0.0f, 10000.0f);
+	m_arcball_centre = glm::vec3(0.0f, 0.0f, 0.0f);
+	m_arcball_up = glm::vec3(0.0f, 1.0f, 0.0f);
 }
 
 /**

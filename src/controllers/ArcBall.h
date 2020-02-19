@@ -39,82 +39,62 @@
  *   Call arcball_reset if you wish to reset the arcball rotation.
  */
 
-#include <cmath>
+#include <glm/fwd.hpp>
+#include <glm/mat4x4.hpp>
 
-class vec  // simple 3D vector class
+class ArcBall
 {
 public:
-	float x, y, z;
+	ArcBall();
+	void set_zoom(float radius, const glm::vec3& eye, const glm::vec3& up);
+	void add_angle(float delta);
+	void add_distance(float delta);
+	/// reset the arc ball
+	void reset();
+	/// begin arc ball rotation
+	void start(const glm::ivec2& position);
+	/// update current arc ball rotation
+	void move(const glm::ivec2& position);
 
-	vec() :
-			x(0), y(0), z(0)
-	{
-	}
-	vec(float xx)
-	{
-		x = xx;
-		y = xx;
-		z = xx;
-	}
-	vec(float xx, float yy, float zz)
-	{
-		x = xx;
-		y = yy;
-		z = zz;
-	}
+	void set_properties(const glm::mat4& proj, const glm::uvec4& view);
+	float get_distance() const;
+	glm::mat4 get_matrix() const;
+	float get_z_rotation() const;
 
-	inline vec operator +=(vec t)  // self-addition
-	{
-		*this = *this + t;
-		return *this;
-	}
+private:
+	/// find the intersection with the plane through the visible edge
+	glm::vec3 edge_coords(const glm::vec3& m);
+	/// find the intersection with the sphere
+	glm::vec3 sphere_coords(const glm::vec2& position);
+	/// get intersection with plane for "trackball" style rotation
+	glm::vec3 planar_coords(const glm::vec2& position);
 
-	inline vec operator +(vec t)  // addition
-	{
-		return vec(x + t.x, y + t.y, z + t.z);
-	}
-	inline vec operator -(vec t)  // subtraction
-	{
-		return vec(x - t.x, y - t.y, z - t.z);
-	}
-	inline vec operator *(float t)  // dot product
-	{
-		return vec(x * t, y * t, z * t);
-	}
-	inline float operator *(vec t)  // scalar product
-	{
-		return x * t.x + y * t.y + z * t.z;
-	}
-	inline vec operator ^(vec t)  // cross product
-	{
-		return vec(y * t.z - z * t.y, t.x * z - x * t.z, x * t.y - y * t.x);
-	}
-	inline float length()  // pythagorean length
-	{
-		return sqrt(x * x + y * y + z * z);
-	}
-	inline vec unit()  // normalized to a length of 1
-	{
-		float l = length();
-		if (l == 0.0) return vec(0.0, 0.0, 0.0);
-		return vec(x / l, y / l, z / l);
-	}
-	inline bool zero()  // returns true if a zero vector
-	{
-		return x == 0 && y == 0 && z == 0;
-	}
-	inline bool equals(vec t)  // returns true if exactly equal
-	{
-		return x == t.x && y == t.y && z == t.z;
-	}
+	glm::mat4 m_quat;
+	glm::mat4 m_last;
+	glm::mat4 m_next;
+	/// the distance from the origin to the eye
+	float m_zoom;
+	float m_zoom2;
+	/// the radius of the arc ball
+	float m_sphere;
+	float m_sphere2;
+	/// the distance from the origin of the plane that intersects
+	/// the edge of the visible sphere (tangent to a ray from the eye)
+	float m_edge;
+	/// whether we are using a sphere or plane
+	bool m_planar;
+	float m_plane_dist;
+	float m_rotation;
+	float m_distance;
+	glm::vec3 m_start;
+	glm::vec3 m_curr;
+	glm::vec3 m_eye;
+	glm::vec3 m_eye_dir;
+	glm::vec3 m_up;
+	glm::vec3 m_out;
+	glm::mat4 m_glp;
+	glm::mat4 m_glm;
+	glm::uvec4 m_glv;
 };
-
-extern void arcball_setzoom(float radius, vec eye, vec up);
-extern void arcball_rotate();
-extern void arcball_add_angle(int);
-extern void arcball_add_distance(int);
-extern void arcball_reset();
-extern void arcball_start(int mx, int my);
-extern void arcball_move(int mx, int my);
 
 #endif

@@ -16,18 +16,15 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
-#include <stddef.h>
+#include <cstddef>
 #include <cmath>
-#include <complex>
 #include <cstdlib>
 #include <iostream>
-#include <sstream>
 #include <string>
-#include <valarray>
 #include <vector>
 
 #include "../utilities/General.h"
-#include "arcball.h"
+#include "ArcBall.h"
 #include "Camera.h"
 #include "Reconstructor.h"
 #include "Scene3DRenderer.h"
@@ -40,17 +37,15 @@ namespace nl_uu_science_gmt
 
 Glut* Glut::m_Glut;
 
-Glut::Glut(
-		Scene3DRenderer &s3d) :
-				m_scene3d(s3d)
+Glut::Glut(Scene3DRenderer &s3d)
+	: m_scene3d(s3d)
+	, m_arc_ball()
 {
 	// static pointer to this class so we can get to it from the static GL events
 	m_Glut = this;
 }
 
-Glut::~Glut()
-{
-}
+Glut::~Glut() = default;
 
 #ifdef __linux__
 /**
@@ -59,7 +54,7 @@ Glut::~Glut()
 void Glut::initializeLinux(
 		const char* win_name, int argc, char** argv)
 {
-	arcball_reset();	//initialize the ArcBall for scene rotation
+	m_arc_ball.reset();	//initialize the ArcBall for scene rotation
 
 	glutInit(&argc, argv);
 	glutInitWindowSize(m_Glut->getScene3d().getWidth(), m_Glut->getScene3d().getHeight());
@@ -94,7 +89,7 @@ void Glut::initializeLinux(
 int Glut::initializeWindows(const char* win_name)
 {
 	Scene3DRenderer &scene3d = m_Glut->getScene3d();
-	arcball_reset();	//initialize the ArcBall for scene rotation
+	m_arc_ball.reset();	//initialize the ArcBall for scene rotation
 
 	WNDCLASSEX windowClass;//window class
 	HWND hwnd;//window handle
@@ -247,7 +242,12 @@ void Glut::reset()
 			scene3d.getArcballUp().z);
 
 	// set up the ArcBall using the current projection matrix
-	arcball_setzoom(scene3d.getSphereRadius(), scene3d.getArcballEye(), scene3d.getArcballUp());
+	m_Glut->m_arc_ball.set_zoom(scene3d.getSphereRadius(), scene3d.getArcballEye(), scene3d.getArcballUp());
+	glm::dmat4 projection;
+	glm::ivec4 view;
+	glGetDoublev(GL_PROJECTION_MATRIX, (double*)&projection);
+	glGetIntegerv(GL_VIEWPORT, (int*)&view);
+	m_Glut->m_arc_ball.set_properties(projection, view);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -333,7 +333,7 @@ void Glut::keyboard(
 		{
 			scene3d.setTopView();
 			reset();
-			arcball_reset();
+			m_Glut->m_arc_ball.reset();
 		}
 		else if (key == 'e' || key == 'E')
 		{
@@ -345,7 +345,7 @@ void Glut::keyboard(
 	{
 		scene3d.setCamera(key_i - 1);
 		reset();
-		arcball_reset();
+		m_Glut->m_arc_ball.reset();
 	}
 }
 
@@ -359,7 +359,7 @@ void Glut::mouse(
 	if (state == GLUT_DOWN)
 	{
 		int invert_y = (m_Glut->getScene3d().getHeight() - y) - 1;  // OpenGL viewport coordinates are Cartesian
-		arcball_start(x, invert_y);
+		m_Glut->m_arc_ball.start({x, invert_y});
 	}
 
 	// scrollwheel support, handcrafted!
@@ -367,11 +367,11 @@ void Glut::mouse(
 	{
 		if (button == MOUSE_WHEEL_UP && !m_Glut->getScene3d().isCameraView())
 		{
-			arcball_add_distance(+250);
+			m_Glut->m_arc_ball.add_distance(+250);
 		}
 		else if (button == MOUSE_WHEEL_DOWN && !m_Glut->getScene3d().isCameraView())
 		{
-			arcball_add_distance(-250);
+			m_Glut->m_arc_ball.add_distance(-250);
 		}
 	}
 }
@@ -464,7 +464,7 @@ LRESULT CALLBACK Glut::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 			int x = (int) LOWORD(lParam);
 			int y = (int) HIWORD(lParam);
 			const int invert_y = (m_Glut->getScene3d().getHeight() - y) - 1;  // OpenGL viewport coordinates are Cartesian
-			arcball_start(x, invert_y);
+			m_Glut->m_arc_ball.start(x, invert_y);
 		}
 		break;
 		case WM_MOUSEMOVE:  // Moving the mouse around
@@ -480,11 +480,11 @@ LRESULT CALLBACK Glut::WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
 			short zDelta = (short) HIWORD(wParam);
 			if (zDelta < 0 && !m_Glut->getScene3d().isCameraView())
 			{
-				arcball_add_distance(+250);
+				m_Glut->m_arc_ball.add_distance(+250);
 			}
 			else if (zDelta > 0 && !m_Glut->getScene3d().isCameraView())
 			{
-				arcball_add_distance(-250);
+				m_Glut->m_arc_ball.add_distance(-250);
 			}
 		}
 		break;
@@ -504,7 +504,7 @@ void Glut::motion(
 {
 	// motion is only called when a mouse button is held down
 	int invert_y = (m_Glut->getScene3d().getHeight() - y) - 1;
-	arcball_move(x, invert_y);
+	m_Glut->m_arc_ball.move({x, invert_y});
 }
 
 /**
@@ -546,7 +546,10 @@ void Glut::display()
 	glMatrixMode(GL_MODELVIEW);  //set modelview matrix
 	glLoadIdentity();  //reset modelview matrix
 
-	arcball_rotate();
+	auto matrix = m_Glut->m_arc_ball.get_matrix();
+	glTranslatef(0, 0, m_Glut->m_arc_ball.get_distance());    //translate zoom on eye z
+	glMultMatrixf((float*)&matrix);
+	glRotatef(m_Glut->m_arc_ball.get_z_rotation(), 0, 0, 1);  //rotate around arcball z
 
 	Scene3DRenderer& scene3d = m_Glut->getScene3d();
 	if (scene3d.isShowGrdFlr())
@@ -632,7 +635,7 @@ void Glut::update(
 	// Auto rotate the scene
 	if (scene3d.isRotate())
 	{
-		arcball_add_angle(2);
+		m_Glut->m_arc_ball.add_angle(2);
 	}
 
 	// Get the image and the foreground image (of set camera)
