@@ -56,14 +56,12 @@ public:
 			Scene3DRenderer &);
 	virtual ~Glut();
 
-#ifdef __linux__
-	void initializeLinux(
+	void initialize(
 			const char*, int, char**);
+#ifdef __linux__
 	static void mouse(
 			int, int, int, int);
-#endif
-#ifdef _WIN32
-	int initializeWindows(const char*);
+#elif defined(_WIN32)
 	void mainLoopWindows();
 #endif
 
@@ -84,6 +82,14 @@ public:
 	{
 		return m_scene3d;
 	}
+
+private:
+#if defined(__linux__)
+	void initializeLinux(
+		const char*, int, char**);
+#elif defined(_WIN32)
+	int initializeWindows(const char*);
+#endif
 };
 
 } /* namespace nl_uu_science_gmt */

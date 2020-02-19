@@ -47,6 +47,17 @@ Glut::Glut(Scene3DRenderer &s3d)
 
 Glut::~Glut() = default;
 
+
+void Glut::initialize(const char* win_name, int argc, char** argv)
+{
+#if defined(__linux__)
+	initializeLinux(win_name, argc, argv);
+#elif defined(_WIN32)
+	initializeWindows(win_name);
+	mainLoopWindows();
+#endif
+}
+
 #ifdef __linux__
 /**
  * Main OpenGL initialisation for Linux-like system (with Glut)

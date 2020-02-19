@@ -123,12 +123,7 @@ void VoxelReconstruction::run(int argc, char** argv)
 	Scene3DRenderer scene3d(reconstructor, m_cam_views);
 	Glut glut(scene3d);
 
-#ifdef __linux__
-	glut.initializeLinux(SCENE_WINDOW.c_str(), argc, argv);
-#elif defined _WIN32
-	glut.initializeWindows(SCENE_WINDOW.c_str());
-	glut.mainLoopWindows();
-#endif
+	glut.initialize(SCENE_WINDOW.c_str(), argc, argv);
 }
 
 } /* namespace nl_uu_science_gmt */
