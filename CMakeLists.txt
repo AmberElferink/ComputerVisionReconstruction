@@ -107,7 +107,7 @@ foreach(asset ${INTRINSICS})
 endforeach()
 
 #############################################
-add_executable (${CMAKE_PROJECT_NAME} ${SOURCE_FILES} ${ASSETS})
+add_executable (${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
 
 #############################################
 target_link_libraries (${CMAKE_PROJECT_NAME}

@@ -22,6 +22,7 @@ namespace nl_uu_science_gmt
 class Camera
 {
 	static std::vector<cv::Point>* m_BoardCorners;  // marked checkerboard corners
+	static cv::Point m_MousePosition;               // position of mouse for helping select corners
 
 	bool m_initialized;                             // Is this camera successfully initialized
 

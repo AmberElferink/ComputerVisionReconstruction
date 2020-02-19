@@ -31,6 +31,7 @@ namespace nl_uu_science_gmt
 {
 
 vector<Point>* Camera::m_BoardCorners;  // marked checkerboard corners
+Point Camera::m_MousePosition;          // current mouse position
 
 Camera::Camera(
 		const string &dp, const string &cp, const int id) :
@@ -190,6 +191,10 @@ void Camera::onMouse(
 			cout << "Added corner " << m_BoardCorners->size() << "... (use CTRL+Click to remove)" << endl;
 		}
 		break;
+	case EVENT_MOUSEMOVE:
+		m_MousePosition.x = x;
+		m_MousePosition.y = y;
+		break;
 	default:
 		break;
 	}
@@ -305,6 +310,8 @@ bool Camera::detExtrinsics(
 					if (c > 0)
 						line(canvas, m_BoardCorners->at(c), m_BoardCorners->at(c - 1), Color_MAGENTA, 1, 8);
 				}
+				Point2i vector = m_MousePosition - m_BoardCorners->back();
+				line(canvas, m_BoardCorners->back() -  10.0f * vector, m_BoardCorners->back() + 10.0f * vector, Color_GREEN, 1, 8);
 			}
 
 			int key = waitKey(10);
