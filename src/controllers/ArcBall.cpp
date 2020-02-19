@@ -70,6 +70,11 @@ void ArcBall::add_distance(float delta)
 	m_distance += delta;
 }
 
+void ArcBall::set_distance(float distance)
+{
+	m_distance = distance;
+}
+
 glm::vec3 ArcBall::edge_coords(const glm::vec3& m)
 {
 	// find the intersection of the edge plane and the ray

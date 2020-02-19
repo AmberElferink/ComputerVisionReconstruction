@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(VoxelRecontruction)
 
 # set(CMAKE_VERBOSE_MAKEFILE OFF)
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 
@@ -19,7 +19,12 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 # 
 # add_definitions(-DTIXML_USE_TICPP)
 
-find_package(GLUT REQUIRED)
+find_package(SDL2 CONFIG)
+if (WIN32 AND MINGW)
+	set(SDL2_INCLUDE_DIRS /mingw64/include/SDL2)
+elseif (TARGET SDL2::SDL2)
+	set(SDL2_LIBRARIES SDL2::SDL2)
+endif()
 find_package(glm REQUIRED)
 find_package(OpenGL 1 REQUIRED)
 find_package(OpenCV COMPONENTS core highgui imgproc calib3d REQUIRED)
@@ -38,11 +43,18 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 # #############################################
 
 add_subdirectory(apps)
+add_subdirectory(thirdparty/glad)
+add_subdirectory(thirdparty/imgui-1.75)
 
 set(SOURCE_FILES
+	src/graphics/IndexedMesh.cpp
+	src/graphics/Pipeline.cpp
+	src/graphics/Context.cpp
+	src/graphics/RenderPass.cpp
+	src/graphics/Ui.cpp
 	src/controllers/ArcBall.cpp
 	src/controllers/Camera.cpp
-	src/controllers/Glut.cpp
+	src/controllers/Renderer.cpp
 	src/controllers/Reconstructor.cpp
 	src/controllers/Scene3DRenderer.cpp
 	src/controllers/ForegroundOptimizer.cpp
@@ -115,10 +127,12 @@ add_executable (${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
 #############################################
 target_link_libraries (${CMAKE_PROJECT_NAME}
 	PRIVATE
+		glad
+		imgui
 		glm
 		OpenGL::GL
-		OpenGL::GLU
-		GLUT::GLUT
 		Threads::Threads
 		OpenMP::OpenMP_CXX
+		${SDL2_LIBRARIES}
 		${OpenCV_LIBS})
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS})

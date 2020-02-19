@@ -49,6 +49,7 @@ public:
 	void set_zoom(float radius, const glm::vec3& eye, const glm::vec3& up);
 	void add_angle(float delta);
 	void add_distance(float delta);
+	void set_distance(float distance);
 	/// reset the arc ball
 	void reset();
 	/// begin arc ball rotation

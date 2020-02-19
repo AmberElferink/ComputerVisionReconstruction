@@ -54,6 +54,11 @@ public:
 
 	void update();
 
+	uint32_t getVoxelCount() const
+	{
+		return m_voxels_amount;
+	}
+
 	const std::vector<Voxel*>& getVisibleVoxels() const
 	{
 		return m_visible_voxels;

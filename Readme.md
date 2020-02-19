@@ -10,8 +10,8 @@ Place data/ file alongside the src folder
 * opencv_imgproc
 * opencv_calib3d
 * GL
-* GLU
-* freeglut
+* glm
+* SDL
 * openmp
 
 
@@ -19,4 +19,5 @@ Place data/ file alongside the src folder
 
 * opencv_world
 * GL
-* GLU
+* glm
+* SDL

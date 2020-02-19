@@ -14,7 +14,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "controllers/Glut.h"
+#include "controllers/Renderer.h"
 #include "controllers/Reconstructor.h"
 #include "controllers/Scene3DRenderer.h"
 #include "utilities/General.h"
@@ -121,7 +121,7 @@ void VoxelReconstruction::run(int argc, char** argv)
 
 	Reconstructor reconstructor(m_cam_views);
 	Scene3DRenderer scene3d(reconstructor, m_cam_views);
-	Glut glut(scene3d);
+	Renderer glut(scene3d);
 
 	glut.initialize(SCENE_WINDOW.c_str(), argc, argv);
 }

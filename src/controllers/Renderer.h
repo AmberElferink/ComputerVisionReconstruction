@@ -1,0 +1,67 @@
+/*
+ * Glut.h
+ *
+ *  Created on: Nov 15, 2013
+ *      Author: coert
+ */
+
+#ifndef GLUT_H_
+#define GLUT_H_
+
+#include <memory>
+
+#include "ArcBall.h"
+
+class IndexedMesh;
+class Pipeline;
+class Context;
+class RenderPass;
+class Ui;
+union SDL_Event;
+struct SDL_KeyboardEvent;
+
+namespace nl_uu_science_gmt
+{
+
+class Scene3DRenderer;
+
+class Renderer
+{
+public:
+	explicit Renderer(Scene3DRenderer &);
+	virtual ~Renderer();
+
+	void initialize(const char* title, int argc, char* argv[]);
+	void initializeGeometry();
+	void initializePipelines();
+	void mouse(const SDL_Event& event, bool& mouse_down);
+	void keyboard(const SDL_KeyboardEvent& event);
+	void reshape(int width, int height);
+	void reset();
+	void display();
+	void update();
+	void quit();
+
+private:
+  Scene3DRenderer &m_scene3d;
+  ArcBall m_arc_ball;
+  std::unique_ptr<Context> m_renderer;
+  std::unique_ptr<Ui> m_ui;
+  std::unique_ptr<RenderPass> m_renderPass;
+  std::unique_ptr<Pipeline> m_wireframePipeline;
+  std::unique_ptr<Pipeline> m_wPipeline;
+  std::unique_ptr<Pipeline> m_arcballPipeline;
+  std::unique_ptr<Pipeline> m_voxelPipeline;
+  std::unique_ptr<IndexedMesh> m_gridMesh;
+  std::unique_ptr<IndexedMesh> m_cameraMesh;
+  std::unique_ptr<IndexedMesh> m_volumeMesh;
+  std::unique_ptr<IndexedMesh> m_wMesh;
+  std::unique_ptr<IndexedMesh> m_voxelMesh;
+  std::unique_ptr<IndexedMesh> m_arcballMesh;
+  glm::mat4 m_viewMatrix;
+  glm::mat4 m_projectionMatrix;
+};
+
+} /* namespace nl_uu_science_gmt */
+
+#endif /* GLUT_H_ */

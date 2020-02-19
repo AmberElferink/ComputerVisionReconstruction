@@ -1,0 +1,18 @@
+file(GLOB imgui_sources *.cpp examples/imgui_impl_sdl.cpp examples/imgui_impl_opengl3.cpp)
+file(GLOB imgui_headers *.h examples/imgui_impl_sdl.h examples/imgui_impl_opengl3.h)
+add_library(imgui STATIC ${imgui_sources} ${imgui_headers})
+if (EMSCRIPTEN)
+  set_target_properties(imgui PROPERTIES
+    COMPILE_FLAGS "-s USE_SDL=2 -s USE_PTHREADS=1"
+    LINK_FLAGS "-s USE_SDL=2 -s FULL_ES3=1 -s GL_ASSERTIONS=1 -s USE_WEBGL2=1 -s USE_PTHREADS=1")
+else()
+  if (WIN32 AND MINGW)
+    set(SDL2_INCLUDE_DIRS $ENV{msys2root}mingw64/include/SDL2)
+    message(${SDL2_INCLUDE_DIRS})
+  elseif (TARGET SDL2::SDL2)
+    set(SDL2_LIBRARIES SDL2::SDL2)
+  endif()
+  target_link_libraries(imgui PRIVATE ${SDL2_LIBRARIES} glad)
+endif()
+target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/examples ${SDL2_INCLUDE_DIRS})
+target_compile_definitions(imgui PRIVATE IMGUI_IMPL_OPENGL_LOADER_GLAD)
