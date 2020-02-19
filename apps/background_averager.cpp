@@ -1,6 +1,6 @@
 #include <cstdlib>
 #include <iostream>
-#include <opencv4/opencv2/videoio.hpp>
+#include <opencv2/videoio.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
