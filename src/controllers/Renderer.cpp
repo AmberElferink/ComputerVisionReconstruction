@@ -24,6 +24,7 @@
 #include "Camera.h"
 #include "Reconstructor.h"
 #include "Scene3DRenderer.h"
+#include "../graphics/Buffer.h"
 #include "../graphics/Context.h"
 #include "../graphics/IndexedMesh.h"
 #include "../graphics/Pipeline.h"
@@ -200,8 +201,8 @@ void Renderer::initializeGeometry()
 		info.DebugName = "grid";
 		m_gridMesh = IndexedMesh::create(info);
 
-		auto vertexMem = m_gridMesh->mapVertexBuffer(IndexedMesh::MemoryMapAccess::Write);
-		auto indexMem = m_gridMesh->mapIndexBuffer(IndexedMesh::MemoryMapAccess::Write);
+		auto vertexMem = m_gridMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
+		auto indexMem = m_gridMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		for (int g = 0; g < gSize; g++)
 		{
 			auto indexBase = &reinterpret_cast<uint32_t*>(indexMem.get())[g * 4];
@@ -228,8 +229,8 @@ void Renderer::initializeGeometry()
 		info.MeshTopology = IndexedMesh::Topology::Lines;
 		info.DebugName = "cameras";
 		m_cameraMesh = IndexedMesh::create(info);
-		auto vertexMem = m_cameraMesh->mapVertexBuffer(IndexedMesh::MemoryMapAccess::Write);
-		auto indexMem = m_cameraMesh->mapIndexBuffer(IndexedMesh::MemoryMapAccess::Write);
+		auto vertexMem = m_cameraMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
+		auto indexMem = m_cameraMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		for (size_t i = 0; i < cameras.size(); i++)
 		{
 			vector<Point3f> plane = cameras[i]->getCameraPlane();
@@ -271,8 +272,8 @@ void Renderer::initializeGeometry()
 		info.MeshTopology = IndexedMesh::Topology::Lines;
 		info.DebugName = "volume";
 		m_volumeMesh = IndexedMesh::create(info);
-		auto vertexMem = m_volumeMesh->mapVertexBuffer(IndexedMesh::MemoryMapAccess::Write);
-		auto indexMem = m_volumeMesh->mapIndexBuffer(IndexedMesh::MemoryMapAccess::Write);
+		auto vertexMem = m_volumeMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
+		auto indexMem = m_volumeMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		auto indexBase = reinterpret_cast<uint32_t*>(indexMem.get());
 		// bottom
 		indexBase[0] = 0;
@@ -327,8 +328,8 @@ void Renderer::initializeGeometry()
 		info.DebugName = "origin";
 		m_wMesh = IndexedMesh::create(info);
 
-		auto vertexMem = m_wMesh->mapVertexBuffer(IndexedMesh::MemoryMapAccess::Write);
-		auto indexMem = m_wMesh->mapIndexBuffer(IndexedMesh::MemoryMapAccess::Write);
+		auto vertexMem = m_wMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
+		auto indexMem = m_wMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 
 		int len = m_scene3d.getSquareSideLen();
 		auto x_len = static_cast<float>(len * (m_scene3d.getBoardSize().height - 1));
@@ -368,8 +369,8 @@ void Renderer::initializeGeometry()
 		info.DebugName = "arcball";
 		m_arcballMesh = IndexedMesh::create(info);
 
-		auto vertexMem = m_arcballMesh->mapVertexBuffer(IndexedMesh::MemoryMapAccess::Write);
-		auto indexMem = m_arcballMesh->mapIndexBuffer(IndexedMesh::MemoryMapAccess::Write);
+		auto vertexMem = m_arcballMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
+		auto indexMem = m_arcballMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 
 		constexpr float sector_step = 2 * glm::pi<float>() / sector_count;
 		constexpr float stack_step = glm::pi<float>() / stack_count;
@@ -429,7 +430,7 @@ void Renderer::initializeGeometry()
 		info.MeshTopology = IndexedMesh::Topology::Points;
 		info.DebugName = "voxels";
 		m_voxelMesh = IndexedMesh::create(info);
-		auto indexMem = m_voxelMesh->mapIndexBuffer(IndexedMesh::MemoryMapAccess::Write);
+		auto indexMem = m_voxelMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		auto indexBase = reinterpret_cast<uint32_t*>(indexMem.get());
 		for (size_t i = 0; i < voxel_count; ++i)
 		{
@@ -749,7 +750,7 @@ void Renderer::update()
 	setTrackbarPos("Frame", VIDEO_WINDOW, scene3d.getCurrentFrame());
 
 	{
-		auto mem = m_voxelMesh->mapVertexBuffer(IndexedMesh::MemoryMapAccess::Write);
+		auto mem = m_voxelMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
 		vector<Reconstructor::Voxel*> voxels = m_scene3d.getReconstructor().getVisibleVoxels();
 		auto gpu_voxels = reinterpret_cast<glm::vec4*>(mem.get());
 		for (uint32_t i = 0; i < voxels.size(); ++i)

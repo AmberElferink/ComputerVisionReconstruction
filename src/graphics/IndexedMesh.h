@@ -6,6 +6,8 @@
 #include <vector>
 #include <string_view>
 
+class Buffer;
+
 /// Wrapper for OpenGL Vertex Array Buffers
 class IndexedMesh {
   public:
@@ -44,16 +46,8 @@ class IndexedMesh {
         Topology MeshTopology;
         std::string_view DebugName;
     };
-    enum MemoryMapAccess {
-        Read = 0x0001,
-        Write = 0x0002,
-    };
-    struct MemoryUnmapper {
-        void operator()(const uint8_t* mapped);
-        uint32_t id_;
-    };
-    const uint32_t vertexBuffer_;
-    const uint32_t indexBuffer_;
+    std::unique_ptr<Buffer> vertex_buffer_;
+    std::unique_ptr<Buffer> index_buffer_;
     const uint32_t vao_;
     const uint32_t element_count;
     const Topology topology;
@@ -80,18 +74,12 @@ class IndexedMesh {
     /// Bind the buffers for drawing
     void bind() const;
 
-    /// Map vertex staging memory for copy before upload to driver and then GPU.
-    /// Once pointer goes out of scope, the memory is offloaded to the driver.
-    std::unique_ptr<uint8_t, MemoryUnmapper>
-    mapVertexBuffer(MemoryMapAccess access);
-    /// Map index staging memory for copy before upload to driver and then GPU.
-    /// Once pointer goes out of scope, the memory is offloaded to the driver.
-    std::unique_ptr<uint8_t, MemoryUnmapper>
-    mapIndexBuffer(MemoryMapAccess access);
+    Buffer& getVertexBuffer() const;
+    Buffer& getIndexBuffer() const;
 
   private:
     /// Private unique constructor forcing the use of factory function which
     /// can return null unlike constructor.
-    IndexedMesh(uint32_t vertex_buffer, uint32_t index_buffer, uint32_t vao,
-                uint32_t element_count, Topology topology);
+    IndexedMesh(std::unique_ptr<Buffer>&& vertex_buffer, std::unique_ptr<Buffer>&& index_buffer,
+                uint32_t vao, uint32_t element_count, Topology topology);
 };

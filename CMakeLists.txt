@@ -47,6 +47,7 @@ add_subdirectory(thirdparty/glad)
 add_subdirectory(thirdparty/imgui-1.75)
 
 set(SOURCE_FILES
+	src/graphics/Buffer.cpp
 	src/graphics/IndexedMesh.cpp
 	src/graphics/Pipeline.cpp
 	src/graphics/Context.cpp
