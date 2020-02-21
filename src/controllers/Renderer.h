@@ -12,10 +12,12 @@
 
 #include "ArcBall.h"
 
-class Mesh;
-class Pipeline;
+class Buffer;
 class Context;
+class Pipeline;
+class Mesh;
 class RenderPass;
+class Texture;
 class Ui;
 union SDL_Event;
 struct SDL_KeyboardEvent;
@@ -51,13 +53,18 @@ private:
   std::unique_ptr<Pipeline> m_wireframePipeline;
   std::unique_ptr<Pipeline> m_wPipeline;
   std::unique_ptr<Pipeline> m_arcballPipeline;
+  std::unique_ptr<Pipeline> m_marchingCubesPipeline;
   std::unique_ptr<Pipeline> m_voxelPipeline;
   std::unique_ptr<Mesh> m_gridMesh;
   std::unique_ptr<Mesh> m_cameraMesh;
   std::unique_ptr<Mesh> m_volumeMesh;
   std::unique_ptr<Mesh> m_wMesh;
-  std::unique_ptr<Mesh> m_voxelMesh;
   std::unique_ptr<Mesh> m_arcballMesh;
+  std::unique_ptr<Buffer> m_indirectBuffer;
+  std::unique_ptr<Buffer> m_marchingCubeEdgeLookUpBuffer;
+  std::unique_ptr<Buffer> m_marchingCubeTriangleLookUpBuffer;
+  std::unique_ptr<Texture> m_scalarField;
+  std::unique_ptr<Mesh> m_voxelMesh;
   glm::mat4 m_viewMatrix;
   glm::mat4 m_projectionMatrix;
 };

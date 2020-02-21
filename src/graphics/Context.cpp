@@ -69,6 +69,10 @@ Context::~Context() {
     SDL_Quit();
 }
 
+void Context::dispatch(uint32_t x, uint32_t y, uint32_t z) {
+    glDispatchCompute(x, y, z);
+}
+
 void Context::swapBuffers() {
     glFinish();
     SDL_GL_SwapWindow(window_.get());

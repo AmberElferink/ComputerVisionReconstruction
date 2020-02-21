@@ -68,6 +68,7 @@ class Mesh {
     /// Draw the indexed mesh using opengl
     void draw() const;
     void draw(uint32_t count) const;
+    void draw(const Buffer& indirect_buffer) const;
     /// Bind the buffers for drawing
     void bind() const;
 

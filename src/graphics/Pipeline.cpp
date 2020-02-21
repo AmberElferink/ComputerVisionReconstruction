@@ -1,9 +1,11 @@
 #include "Pipeline.h"
 
 #include <glad/glad.h>
-#include <glm/fwd.hpp>
 
-std::unique_ptr<Pipeline> Pipeline::create(const Pipeline::CreateInfo& info) {
+#include "private_impl/GraphicsPipeline.h"
+#include "private_impl/ComputePipeline.h"
+
+std::unique_ptr<Pipeline> Pipeline::create(const Pipeline::GraphicsCreateInfo& info) {
     // Bind state which would force a recompile of the shader
     glLineWidth(info.LineWidth);
 
@@ -80,72 +82,54 @@ std::unique_ptr<Pipeline> Pipeline::create(const Pipeline::CreateInfo& info) {
     }
 
     return std::unique_ptr<Pipeline>(
-        new Pipeline(program, info.ViewportWidth, info.ViewportHeight, info.LineWidth));
+        new GraphicsPipeline(program, info.ViewportWidth, info.ViewportHeight, info.LineWidth));
 }
 
-Pipeline::Pipeline(uint32_t program, uint32_t viewportWidth, uint32_t viewportHeight, float lineWidth)
-    : program_(program)
-    , viewportWidth_(viewportWidth)
-    , viewportHeight_(viewportHeight)
-    , lineWidth_(lineWidth)
-{}
-
-Pipeline::~Pipeline() { glDeleteProgram(program_); }
-
-void Pipeline::bind() {
-    glViewport(0, 0, viewportWidth_, viewportHeight_);
-    glUseProgram(program_);
-    glLineWidth(lineWidth_);
-}
-
-template <>
-bool Pipeline::setUniform(const std::string_view& uniform_name, const glm::mat4& uniform)
-{
-    auto index = glGetUniformLocation(program_, uniform_name.data());
-    if (index == GL_INVALID_INDEX) {
-        std::fprintf(stderr, "Could not bind uniform %s: name not present\n", uniform_name.data());
-        return false;
+std::unique_ptr<Pipeline> Pipeline::create(const Pipeline::ComputeCreateInfo& info) {
+    uint32_t shader = glCreateShader(GL_COMPUTE_SHADER);
+    if (shader < 0) {
+        return nullptr;
     }
-    glProgramUniformMatrix4fv(program_, index, 1, false, (float*)&uniform);
-
-    return true;
-}
-
-template <>
-bool Pipeline::setUniform(const std::string_view& uniform_name, const glm::vec4& uniform)
-{
-    auto index = glGetUniformLocation(program_, uniform_name.data());
-    if (index == GL_INVALID_INDEX) {
-        std::fprintf(stderr, "Could not bind uniform %s: name not present\n", uniform_name.data());
-        return false;
+    {
+        auto src = info.ShaderSource.data();
+        glShaderSource(shader, 1, &src, nullptr);
+        glCompileShader(shader);
+        int success;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+        char infoLog[512];
+        if (success == 0) {
+            glGetShaderInfoLog(shader, sizeof(infoLog), nullptr, infoLog);
+            std::fprintf(stderr, "%s\n", infoLog);
+            return nullptr;
+        }
     }
-    glProgramUniform4fv(program_, index, 1, (float*)&uniform);
-
-    return true;
-}
-
-template <>
-bool Pipeline::setUniform(const std::string_view& uniform_name, const glm::vec3& uniform)
-{
-    auto index = glGetUniformLocation(program_, uniform_name.data());
-    if (index == GL_INVALID_INDEX) {
-        std::fprintf(stderr, "Could not bind uniform %s: name not present\n", uniform_name.data());
-        return false;
+    if (!info.DebugName.empty()) {
+        glObjectLabel(
+            GL_SHADER, shader, -1,
+            (info.DebugName.data() + std::string(" compute shader")).data());
     }
-    glProgramUniform3fv(program_, index, 1, (float*)&uniform);
 
-    return true;
-}
+    // link the different shaders to one program (the program you see in
+    // RenderDoc)
+    uint32_t program = glCreateProgram();
+    glAttachShader(program, shader);
+    glLinkProgram(program);
 
-template <>
-bool Pipeline::setUniform(const std::string_view& uniform_name, const float& uniform)
-{
-    auto index = glGetUniformLocation(program_, uniform_name.data());
-    if (index == GL_INVALID_INDEX) {
-        std::fprintf(stderr, "Could not bind uniform %s: name not present\n", uniform_name.data());
-        return false;
+    {
+        char infoLog[512];
+        int success;
+        glGetProgramiv(program, GL_LINK_STATUS, &success);
+        if (!success) {
+            glGetProgramInfoLog(program, 512, nullptr, infoLog);
+            std::fprintf(stderr, "%s\n", infoLog);
+            return nullptr;
+        }
     }
-    glProgramUniform1f(program_, index, uniform);
+    glDeleteShader(shader);
 
-    return true;
+    if (!info.DebugName.empty()) {
+        glObjectLabel(GL_PROGRAM, program, -1, info.DebugName.data());
+    }
+
+    return std::unique_ptr<Pipeline>(new ComputePipeline(program));
 }

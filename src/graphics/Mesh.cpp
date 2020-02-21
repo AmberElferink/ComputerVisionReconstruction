@@ -309,6 +309,19 @@ void Mesh::draw(uint32_t count) const
     }
 }
 
+void Mesh::draw(const Buffer& indirect_buffer) const {
+    indirect_buffer.bind();
+    bind();
+    if (index_buffer_)
+    {
+        glDrawElementsIndirect(topology_, GL_UNSIGNED_INT, nullptr);
+    }
+    else
+    {
+        glDrawArraysIndirect(topology_, nullptr);
+    }
+}
+
 void Mesh::bind() const
 {
     glBindVertexArray(vao_);

@@ -14,6 +14,7 @@ public:
     enum class Type {
         Vertex,
         Index,
+        ShaderStorage,
         IndirectDraw,
     };
     enum class Usage {
@@ -41,7 +42,8 @@ public:
     virtual ~Buffer();
 
     std::unique_ptr<uint8_t, MemoryUnmapper> map(MemoryMapAccess access);
-    void bind();
+    void bind() const;
+    void bind(Type type) const;
 
 private:
     Buffer(uint32_t handle, uint32_t target, uint32_t size);
@@ -49,7 +51,11 @@ private:
     const uint32_t handle_;
     const uint32_t target_;
     const uint32_t size_;
+
     friend class Mesh;
+    friend class Pipeline;
+    friend class ComputePipeline;
+    friend class GraphicsPipeline;
 };
 
 #endif  // GRAPHICS_BUFFER_H

@@ -24,6 +24,8 @@ public:
 
   virtual ~Context();
 
+  void dispatch(uint32_t x, uint32_t y=1, uint32_t z=1);
+
   /// Swap the backbuffer to screen so draw to the screen is done on new
   /// backbuffer
   void swapBuffers();

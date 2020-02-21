@@ -50,8 +50,11 @@ set(SOURCE_FILES
 	src/graphics/Buffer.cpp
 	src/graphics/Mesh.cpp
 	src/graphics/Pipeline.cpp
+	src/graphics/private_impl/ComputePipeline.cpp
+	src/graphics/private_impl/GraphicsPipeline.cpp
 	src/graphics/Context.cpp
 	src/graphics/RenderPass.cpp
+	src/graphics/Texture.cpp
 	src/graphics/Ui.cpp
 	src/controllers/ArcBall.cpp
 	src/controllers/Camera.cpp

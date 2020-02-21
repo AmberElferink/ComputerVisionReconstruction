@@ -40,7 +40,9 @@ Reconstructor::Reconstructor(
 	}
 
 	const size_t edge = 2 * m_height;
+	m_voxels_dimension = Vec3w(edge / m_step, edge / m_step, m_height / m_step);
 	m_voxels_amount = (edge / m_step) * (edge / m_step) * (m_height / m_step);
+	m_scalar_field.resize(m_voxels_amount, 0.0f);
 
 	initialize();
 }
@@ -90,7 +92,7 @@ void Reconstructor::initialize()
 	m_corners.push_back(new Point3f((float) xR, (float) yL, (float) zR));
 
 	// Acquire some memory for efficiency
-	cout << "Initializing " << m_voxels_amount << " voxels ";
+	cout << "Initializing " << m_voxels_amount << " voxels..." << endl;
 	m_voxels.resize(m_voxels_amount);
 
 	int z;
@@ -105,7 +107,7 @@ void Reconstructor::initialize()
 		if (done > pdone)
 		{
 			pdone = done;
-			cout << done << "%..." << flush;
+			cout << done << "%\r" << flush;
 		}
 
 		int y, x;
@@ -164,7 +166,7 @@ void Reconstructor::update()
 	{
 		int camera_counter = 0;
 		Voxel* voxel = m_voxels[v];
-
+		m_scalar_field[v] = 0.0f;
 		for (size_t c = 0; c < m_cameras.size(); ++c)
 		{
 			if (voxel->valid_camera_projection[c])
@@ -172,13 +174,17 @@ void Reconstructor::update()
 				const Point point = voxel->camera_projection[c];
 
 				//If there's a white pixel on the foreground image at the projection point, add the camera
-				if (m_cameras[c]->getForegroundImage().at<uchar>(point) == 255) ++camera_counter;
+				if (m_cameras[c]->getForegroundImage().at<uchar>(point) == 255)
+				{
+					++camera_counter;
+				}
 			}
 		}
 
 		// If the voxel is present on all cameras
 		if (camera_counter == m_cameras.size())
 		{
+			m_scalar_field[v] = 1.0f;
 #pragma omp critical //push_back is critical
 			visible_voxels.push_back(voxel);
 		}

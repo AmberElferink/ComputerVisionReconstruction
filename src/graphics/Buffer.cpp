@@ -1,34 +1,33 @@
 #include "Buffer.h"
 
 #include <cassert>
+#include <array>
 #include <glad/glad.h>
+
+namespace {
+std::array<uint32_t, 4> type_lookup {
+    /* Vertex        */ GL_ARRAY_BUFFER,
+    /* Index         */ GL_ELEMENT_ARRAY_BUFFER,
+    /* ShaderStorage */ GL_SHADER_STORAGE_BUFFER,
+    /* IndirectDraw  */ GL_DRAW_INDIRECT_BUFFER,
+};
+}
 
 std::unique_ptr<Buffer> Buffer::create(const CreateInfo& info)
 {
     uint32_t handle;
     glCreateBuffers(1, &handle); // create buffer pointer on gpu
-    if (info.DebugName.data()) {
+    if (handle == 0)
+    {
+        return nullptr;
+    }
+    if (!info.DebugName.empty()) {
         // to be able to read it in RenderDoc/errors
         glObjectLabel(GL_BUFFER, handle, -1, info.DebugName.data());
     }
 
     uint32_t usage = static_cast<uint32_t>(info.BufferUsage) + GL_STREAM_DRAW;
-    uint32_t target;
-    switch (info.BufferType)
-    {
-    case Buffer::Type::Vertex:
-        target = GL_ARRAY_BUFFER;
-        break;
-    case Buffer::Type::Index:
-        target = GL_ELEMENT_ARRAY_BUFFER;
-        break;
-    case Buffer::Type::IndirectDraw:
-        target = GL_DRAW_INDIRECT_BUFFER;
-        break;
-    default:
-        assert(false);
-    }
-
+    uint32_t target = type_lookup[static_cast<uint32_t>(info.BufferType)];
     glNamedBufferData(handle, info.Size, nullptr, usage);
 
     return std::unique_ptr<Buffer>(new Buffer(handle, target, info.Size));
@@ -58,9 +57,15 @@ Buffer::map(Buffer::MemoryMapAccess access)
         reinterpret_cast<uint8_t *>(mapped), {handle_});
 }
 
-void Buffer::bind()
+void Buffer::bind() const
 {
     glBindBuffer(target_, handle_);
+}
+
+void Buffer::bind(Type type) const
+{
+    uint32_t target = type_lookup[static_cast<uint32_t>(type)];
+    glBindBuffer(target, handle_);
 }
 
 void Buffer::MemoryUnmapper::operator()(const uint8_t *mapped)
