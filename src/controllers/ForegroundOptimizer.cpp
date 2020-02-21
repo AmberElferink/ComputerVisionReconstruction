@@ -44,7 +44,6 @@ void ForegroundOptimizer::optimizeThresholds(int maxExtraContoursS, int maxExtra
 		);
 		FindContours(foreground);
 		int currNrContours = contours.size();
-		printf("contours: %i, lastNrContours: %i, i: %i, lastMergedContours_i: %i \n", currNrContours, lastNrContours, i, lastMergedContours_i);
 		if (currNrContours > lastNrContours + maxExtraContoursS)
 		{
 			s_threshold = lastMergedContours_i;

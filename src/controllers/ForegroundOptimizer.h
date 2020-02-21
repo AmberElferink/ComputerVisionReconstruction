@@ -8,7 +8,7 @@ class ForegroundOptimizer
 	std::vector<double> maxContourAreas; //save the amount of max contours you can have
 	std::vector<int> maxContourIndices;
 	int savedContoursCounter = 0;
-	int nrContoursTracked = 3; //the number of contours tracked
+	int nrContoursTracked; //the number of contours tracked
 
 	std::vector<std::vector<cv::Point>> contours;
 	std::vector<cv::Vec4i> hierarchy; //not in use

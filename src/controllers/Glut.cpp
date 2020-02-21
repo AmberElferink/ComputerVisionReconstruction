@@ -335,6 +335,11 @@ void Glut::keyboard(
 			reset();
 			arcball_reset();
 		}
+		else if (key == 'e' || key == 'E')
+		{
+			scene3d.calibThresholds();
+		}
+
 	}
 	else if (key_i > 0 && key_i <= (int) scene3d.getCameras().size())
 	{

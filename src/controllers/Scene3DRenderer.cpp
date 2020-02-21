@@ -69,6 +69,8 @@ Scene3DRenderer::Scene3DRenderer(
 	m_current_frame = 0;
 	m_previous_frame = -1;
 
+	
+
 	const int H = 13;
 	const int S = 255;
 	const int V = 255;
@@ -78,35 +80,54 @@ Scene3DRenderer::Scene3DRenderer(
 	m_ps_threshold = S;
 	m_v_threshold = V;
 	m_pv_threshold = V;
+	m_thresholdMaxNoise = 10;
 
-	m_cameras[0]->advanceVideoFrame();
-	assert(!m_cameras[0]->getFrame().empty());
+	calibThresholds();
+
+	updateTrackbars();
+
+	createFloorGrid();
+	setTopView();
+}
+
+void Scene3DRenderer::updateTrackbars()
+{
+	createTrackbar("max noise", VIDEO_WINDOW, &m_thresholdMaxNoise, 255);
+	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
+	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
+	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
+	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
+}
+
+void Scene3DRenderer::calibThresholds()
+{
+	m_h_threshold = 0;
+	m_s_threshold = 255;
+	m_v_threshold = 255;
+
+	m_cameras[3]->advanceVideoFrame();
+	assert(!m_cameras[3]->getVideoFrame(0).empty());
 	Mat hsv_image;
-	cvtColor(m_cameras[0]->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
+	cvtColor(m_cameras[3]->getVideoFrame(0), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
 	std::vector<cv::Mat> channels;
 	cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
 
 	foregroundOptimizer->optimizeThresholds(
-		5,
-		13,
-		m_cameras[0]->getBgHsvChannels().at(0),
-		m_cameras[0]->getBgHsvChannels().at(1),
-		m_cameras[0]->getBgHsvChannels().at(2),
+		m_thresholdMaxNoise,
+		m_thresholdMaxNoise,
+		m_cameras[3]->getBgHsvChannels().at(0),
+		m_cameras[3]->getBgHsvChannels().at(1),
+		m_cameras[3]->getBgHsvChannels().at(2),
 		channels,
 		m_h_threshold,
 		m_s_threshold,
 		m_v_threshold
 	);
+	updateTrackbars();
 
-	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
-	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
-	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
-	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
-
-	createFloorGrid();
-	setTopView();
 }
+
 
 /**
  * Deconstructor
@@ -167,14 +188,14 @@ void Scene3DRenderer::processForeground(Camera* camera)
 
 	foregroundOptimizer->FindContours(foreground);
 	foregroundOptimizer->SaveMaxContours();
-	//foregroundOptimizer->DrawMaxContours(foreground, true, 255);
-
-
+	foregroundOptimizer->DrawMaxContours(foreground, true, 255);
 	
 
 	// Improve the foreground image
 	camera->setForegroundImage(foreground);
 }
+
+
 
 /**
  * Set currently visible camera to the given camera id

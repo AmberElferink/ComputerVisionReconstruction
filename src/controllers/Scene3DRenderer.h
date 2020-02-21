@@ -71,6 +71,9 @@ class Scene3DRenderer
 	int m_ps_threshold;                       // Saturation threshold value at previous iteration (update awareness)
 	int m_v_threshold;                        // Value threshold number for background subtraction
 	int m_pv_threshold;                       // Value threshold value at previous iteration (update awareness)
+	int m_s_thresholdMaxContourIncrease;		  // max increases in seperate blobs detected betweewn threshold operations until termination for S
+	int m_thresholdMaxNoise;		  // max increases in seperate blobs detected betweewn threshold operations until termination for V
+
 
 	// edge points of the virtual ground floor grid
 	std::vector<std::vector<cv::Point3i*> > m_floor_grid;
@@ -84,7 +87,11 @@ class Scene3DRenderer
 public:
 	Scene3DRenderer(
 			Reconstructor &, const std::vector<Camera*> &);
+
 	virtual ~Scene3DRenderer();
+
+	void calibThresholds();
+	void updateTrackbars();
 
 	void processForeground(
 			Camera*);
