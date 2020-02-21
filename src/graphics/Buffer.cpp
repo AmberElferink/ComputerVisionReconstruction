@@ -31,12 +31,13 @@ std::unique_ptr<Buffer> Buffer::create(const CreateInfo& info)
 
     glNamedBufferData(handle, info.Size, nullptr, usage);
 
-    return std::unique_ptr<Buffer>(new Buffer(handle, target));
+    return std::unique_ptr<Buffer>(new Buffer(handle, target, info.Size));
 }
 
-Buffer::Buffer(uint32_t handle, uint32_t target)
+Buffer::Buffer(uint32_t handle, uint32_t target, uint32_t size)
     : handle_(handle)
     , target_(target)
+    , size_(size)
 {
 }
 

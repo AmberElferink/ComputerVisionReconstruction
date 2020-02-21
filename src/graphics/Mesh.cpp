@@ -1,4 +1,4 @@
-#include "IndexedMesh.h"
+#include "Mesh.h"
 
 #include <cassert>
 #include <cstring>
@@ -37,7 +37,6 @@ namespace
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, // 4 center
             0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // 5 z axis
     };
-    constexpr uint32_t axis_indices[] = {0, 1, 2, 3, 4, 5};
 
 //cube vertices from: http://www.opengl-tutorial.org/beginners-tutorials/tutorial-4-a-colored-cube/
 // Our vertices. Three consecutive floats give a 3D vertex; Three consecutive vertices give a triangle.
@@ -88,38 +87,11 @@ namespace
             1.0f, 0.0f, 0.0f,  0.0f, 0.0f, -1.0f,
             0.0f, 0.0f, 0.0f,  0.0f, 0.0f, -1.0f,
     };
-
-    constexpr uint32_t cube_indices[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-                                         22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35};
 } // namespace
 
-std::unique_ptr<IndexedMesh> IndexedMesh::create(const CreateInfo &info)
+std::unique_ptr<Mesh> Mesh::create(const CreateInfo &info, std::unique_ptr<Buffer>&& vertex_buffer, std::unique_ptr<Buffer>&& index_buffer)
 {
-    Buffer::CreateInfo buffer_info;
-
-    // Vertex Buffer
-    buffer_info.Size = info.VertexBufferSize;
-    buffer_info.BufferType = Buffer::Type::Vertex;
-    buffer_info.BufferUsage = info.DynamicVertices ? Buffer::Usage::DynamicDraw : Buffer::Usage::StaticDraw;
-    if (info.DebugName.data())
-    {
-        buffer_info.DebugName = info.DebugName.data() + std::string(" vertex buffer");
-    }
-    auto vertex_buffer = Buffer::create(buffer_info);
-    if (!vertex_buffer)
-        return nullptr;
-
-    // Index Buffer
-    buffer_info.Size = info.IndexBufferSize;
-    buffer_info.BufferType = Buffer::Type::Index;
-    buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
-    if (info.DebugName.data())
-    {
-        buffer_info.DebugName = info.DebugName.data() + std::string(" index buffer");
-    }
-    auto index_buffer = Buffer::create(buffer_info);
-    if (!index_buffer)
-        return nullptr;
+    assert(vertex_buffer);
 
     uint32_t vao;
     glCreateVertexArrays(1, &vao);
@@ -138,7 +110,7 @@ std::unique_ptr<IndexedMesh> IndexedMesh::create(const CreateInfo &info)
         auto size = info.Attributes[i].Count;
         switch (info.Attributes[i].Type)
         {
-            case IndexedMesh::MeshAttributes::DataType::Float:
+            case Mesh::MeshAttributes::DataType::Float:
                 size *= sizeof(float);
                 break;
             default:
@@ -152,7 +124,10 @@ std::unique_ptr<IndexedMesh> IndexedMesh::create(const CreateInfo &info)
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer->handle_);
     // binds buffers to the slot in the vao, and this makes no sense but is
     // needed somehow
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer->handle_);
+    if (index_buffer)
+    {
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, index_buffer->handle_);
+    }
 
     glVertexArrayVertexBuffer(vao, 0, vertex_buffer->handle_, 0, totalStride);
 
@@ -179,25 +154,51 @@ std::unique_ptr<IndexedMesh> IndexedMesh::create(const CreateInfo &info)
         attr_offset += size;
     }
 
-    return std::unique_ptr<IndexedMesh>(
-            new IndexedMesh(std::move(vertex_buffer), std::move(index_buffer),
-                            vao, info.IndexBufferSize / sizeof(uint32_t),
-                            info.MeshTopology));
+    uint32_t element_count = index_buffer ? index_buffer->size_ / sizeof(uint32_t)
+        : vertex_buffer->size_ / totalStride;
+
+    return std::unique_ptr<Mesh>(
+            new Mesh(std::move(vertex_buffer), std::move(index_buffer),
+                     vao, element_count, info.MeshTopology));
 }
 
-std::unique_ptr<IndexedMesh>
-IndexedMesh::createFullscreenQuad(const std::string_view &debug_name)
+std::unique_ptr<Mesh>
+Mesh::createFullscreenQuad(const std::string_view &debug_name)
 {
-    const std::vector<IndexedMesh::MeshAttributes> attributes{
-            MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 2}};
+    Buffer::CreateInfo buffer_info;
+
+    // Vertex Buffer
+    buffer_info.Size = sizeof(quad_vertices);
+    buffer_info.BufferType = Buffer::Type::Vertex;
+    buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+    if (debug_name.data())
+    {
+        buffer_info.DebugName = debug_name.data() + std::string(" vertex buffer");
+    }
+    auto vertex_buffer = Buffer::create(buffer_info);
+    if (!vertex_buffer)
+        return nullptr;
+
+    // Index Buffer
+    buffer_info.Size = sizeof(quad_indices);
+    buffer_info.BufferType = Buffer::Type::Index;
+    buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+    if (debug_name.data())
+    {
+        buffer_info.DebugName = debug_name.data() + std::string(" index buffer");
+    }
+    auto index_buffer = Buffer::create(buffer_info);
+    if (!index_buffer)
+        return nullptr;
+
+    const std::vector<Mesh::MeshAttributes> attributes{
+            MeshAttributes{Mesh::MeshAttributes::DataType::Float, 2}};
     CreateInfo info;
     info.Attributes = attributes.data();
     info.AttributeCount = attributes.size();
-    info.VertexBufferSize = sizeof(quad_vertices);
-    info.IndexBufferSize = sizeof(quad_indices);
     info.MeshTopology = Topology::Triangles;
     info.DebugName = debug_name;
-    auto fullscreen_quad = IndexedMesh::create(info);
+    auto fullscreen_quad = Mesh::create(info, std::move(vertex_buffer), std::move(index_buffer));
 
     std::memcpy(fullscreen_quad->getVertexBuffer().map(Buffer::MemoryMapAccess::Write).get(),
             quad_vertices, sizeof(quad_vertices));
@@ -207,92 +208,119 @@ IndexedMesh::createFullscreenQuad(const std::string_view &debug_name)
     return fullscreen_quad;
 }
 
-std::unique_ptr<IndexedMesh> IndexedMesh::createAxis(const std::string_view &debug_name)
+std::unique_ptr<Mesh> Mesh::createAxis(const std::string_view &debug_name)
 {
-    const std::vector<IndexedMesh::MeshAttributes> attributes{
-            MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 3}, // position
-            MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 3}, // color
+    Buffer::CreateInfo buffer_info;
+
+    // Vertex Buffer
+    buffer_info.Size = sizeof(axis_vertices);
+    buffer_info.BufferType = Buffer::Type::Vertex;
+    buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+    if (debug_name.data())
+    {
+        buffer_info.DebugName = debug_name.data() + std::string(" vertex buffer");
+    }
+    auto vertex_buffer = Buffer::create(buffer_info);
+    if (!vertex_buffer)
+        return nullptr;
+
+    const std::vector<Mesh::MeshAttributes> attributes{
+            MeshAttributes{Mesh::MeshAttributes::DataType::Float, 3}, // position
+            MeshAttributes{Mesh::MeshAttributes::DataType::Float, 3}, // color
     };
+
     CreateInfo info;
     info.Attributes = attributes.data();
     info.AttributeCount = attributes.size();
-    info.VertexBufferSize = sizeof(axis_vertices);
-    info.IndexBufferSize = sizeof(axis_indices);
     info.MeshTopology = Topology::Lines;
     info.DebugName = debug_name;
-    auto axis = IndexedMesh::create(info);
+    auto axis = Mesh::create(info, std::move(vertex_buffer), nullptr);
 
     std::memcpy(axis->getVertexBuffer().map(Buffer::MemoryMapAccess::Write).get(),
             axis_vertices, sizeof(axis_vertices));
-    std::memcpy(axis->getIndexBuffer().map(Buffer::MemoryMapAccess::Write).get(),
-            axis_indices, sizeof(axis_indices));
 
     return axis;
 }
 
-std::unique_ptr<IndexedMesh> IndexedMesh::createCube(const std::string_view &debug_name)
+std::unique_ptr<Mesh> Mesh::createCube(const std::string_view &debug_name)
 {
-    const std::vector<IndexedMesh::MeshAttributes> attributes{
-            MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 3}, // position
-            MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 3}, //normals
+    Buffer::CreateInfo buffer_info;
+
+    // Vertex Buffer
+    buffer_info.Size = sizeof(cube_vertices);
+    buffer_info.BufferType = Buffer::Type::Vertex;
+    buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+    if (debug_name.data())
+    {
+        buffer_info.DebugName = debug_name.data() + std::string(" vertex buffer");
+    }
+    auto vertex_buffer = Buffer::create(buffer_info);
+    if (!vertex_buffer)
+        return nullptr;
+
+    const std::vector<Mesh::MeshAttributes> attributes{
+            MeshAttributes{Mesh::MeshAttributes::DataType::Float, 3}, // position
+            MeshAttributes{Mesh::MeshAttributes::DataType::Float, 3}, //normals
     };
     CreateInfo info;
     info.Attributes = attributes.data();
     info.AttributeCount = attributes.size();
-    info.VertexBufferSize = sizeof(cube_vertices);
-    info.IndexBufferSize = sizeof(cube_indices);
     info.MeshTopology = Topology::Triangles;
     info.DebugName = debug_name;
-    auto cube = IndexedMesh::create(info);
+    auto cube = Mesh::create(info, std::move(vertex_buffer), nullptr);
 
     std::memcpy(cube->getVertexBuffer().map(Buffer::MemoryMapAccess::Write).get(),
             cube_vertices, sizeof(cube_vertices));
-    std::memcpy(cube->getIndexBuffer().map(Buffer::MemoryMapAccess::Write).get(),
-            cube_indices, sizeof(cube_indices));
 
     return cube;
 }
 
-IndexedMesh::IndexedMesh(std::unique_ptr<Buffer>&& vertex_buffer, std::unique_ptr<Buffer>&& index_buffer,
-                         uint32_t vao, uint32_t element_count, Topology topology)
+Mesh::Mesh(std::unique_ptr<Buffer>&& vertex_buffer, std::unique_ptr<Buffer>&& index_buffer,
+           uint32_t vao, uint32_t element_count, Topology topology)
     : vertex_buffer_(std::move(vertex_buffer))
     , index_buffer_(std::move(index_buffer))
     , vao_(vao)
-    , element_count(element_count)
-    , topology(topology)
+    , element_count_(element_count)
+    , topology_(topology)
 {
 }
 
-IndexedMesh::~IndexedMesh()
+Mesh::~Mesh()
 {
-    glDeleteBuffers(2, reinterpret_cast<uint32_t *>(this));
     glDeleteVertexArrays(1, &vao_);
 }
 
-void IndexedMesh::draw() const
+void Mesh::draw() const
 {
-    bind();
-    glDrawElements(topology, element_count, GL_UNSIGNED_INT, nullptr);
+    draw(element_count_);
 }
 
-void IndexedMesh::draw(uint32_t count) const
+void Mesh::draw(uint32_t count) const
 {
-    assert(count <= element_count);
+    assert(count <= element_count_);
     bind();
-    glDrawElements(topology, count, GL_UNSIGNED_INT, nullptr);
+    if (index_buffer_)
+    {
+        glDrawElements(topology_, count, GL_UNSIGNED_INT, nullptr);
+    }
+    else
+    {
+        glDrawArrays(topology_, 0, count);
+    }
 }
 
-void IndexedMesh::bind() const
+void Mesh::bind() const
 {
     glBindVertexArray(vao_);
 }
 
-Buffer& IndexedMesh::getVertexBuffer() const
+Buffer& Mesh::getVertexBuffer() const
 {
     return *vertex_buffer_;
 }
 
-Buffer& IndexedMesh::getIndexBuffer() const
+Buffer& Mesh::getIndexBuffer() const
 {
+    assert(index_buffer_);
     return *index_buffer_;
 }

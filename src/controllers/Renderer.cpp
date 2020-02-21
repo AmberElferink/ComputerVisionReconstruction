@@ -26,7 +26,7 @@
 #include "Scene3DRenderer.h"
 #include "../graphics/Buffer.h"
 #include "../graphics/Context.h"
-#include "../graphics/IndexedMesh.h"
+#include "../graphics/Mesh.h"
 #include "../graphics/Pipeline.h"
 #include "../graphics/RenderPass.h"
 #include "../graphics/Ui.h"
@@ -184,33 +184,33 @@ void Renderer::initialize(const char* win_name, int argc, char** argv)
 
 void Renderer::initializeGeometry()
 {
-	IndexedMesh::CreateInfo info = {};
-	const std::vector<IndexedMesh::MeshAttributes> wireframe_attributes{
-		IndexedMesh::MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 3},
+	Mesh::CreateInfo info = {};
+	const std::vector<Mesh::MeshAttributes> wireframe_attributes{
+        Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 3},
 	};
 
 	// Grid
 	{
+		int gSize = m_scene3d.getNum() * 2 + 1;
+
+		// Vertex Buffer
+		Buffer::CreateInfo buffer_info;
+		buffer_info.Size = 4 * gSize * sizeof(glm::vec3);
+		buffer_info.BufferType = Buffer::Type::Vertex;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "grid vertex buffer";
+		auto vertex_buffer = Buffer::create(buffer_info);
+
 		vector<vector<Point3i *> > floor_grid = m_scene3d.getFloorGrid();
-		int gSize = m_scene3d.getNum()*2 + 1;
 		info.Attributes = wireframe_attributes.data();
 		info.AttributeCount = wireframe_attributes.size();
-		info.IndexBufferSize = 4 * gSize * sizeof(uint32_t);
-		info.VertexBufferSize = 4 * gSize * sizeof(glm::vec3);
-		info.MeshTopology = IndexedMesh::Topology::Lines;
+		info.MeshTopology = Mesh::Topology::Lines;
 		info.DebugName = "grid";
-		m_gridMesh = IndexedMesh::create(info);
+		m_gridMesh = Mesh::create(info, std::move(vertex_buffer), nullptr);
 
 		auto vertexMem = m_gridMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
-		auto indexMem = m_gridMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		for (int g = 0; g < gSize; g++)
 		{
-			auto indexBase = &reinterpret_cast<uint32_t*>(indexMem.get())[g * 4];
-			indexBase[0] = g * 4;
-			indexBase[1] = g * 4 + 1;
-			indexBase[2] = g * 4 + 2;
-			indexBase[3] = g * 4 + 3;
-
 			auto vertexBase = &reinterpret_cast<glm::vec3*>(vertexMem.get())[g * 4];
 			vertexBase[0] = glm::vec3(floor_grid[0][g]->x, floor_grid[0][g]->y, floor_grid[0][g]->z);
 			vertexBase[1] = glm::vec3(floor_grid[2][g]->x, floor_grid[2][g]->y, floor_grid[2][g]->z);
@@ -222,13 +222,26 @@ void Renderer::initializeGeometry()
 	// Camera
 	{
 		vector<Camera*> cameras = m_scene3d.getCameras();
+
+		Buffer::CreateInfo buffer_info;
+		// Vertex Buffer
+		buffer_info.Size = 5 * cameras.size() * sizeof(glm::vec3);
+		buffer_info.BufferType = Buffer::Type::Vertex;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "cameras vertex buffer";
+		auto vertex_buffer = Buffer::create(buffer_info);
+		// Index Buffer
+		buffer_info.Size = 16 * cameras.size() * sizeof(uint32_t);
+		buffer_info.BufferType = Buffer::Type::Index;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "cameras index buffer";
+		auto index_buffer = Buffer::create(buffer_info);
+
 		info.Attributes = wireframe_attributes.data();
 		info.AttributeCount = wireframe_attributes.size();
-		info.IndexBufferSize = 16 * cameras.size() * sizeof(uint32_t);
-		info.VertexBufferSize = 5 * cameras.size() * sizeof(glm::vec3);
-		info.MeshTopology = IndexedMesh::Topology::Lines;
+		info.MeshTopology = Mesh::Topology::Lines;
 		info.DebugName = "cameras";
-		m_cameraMesh = IndexedMesh::create(info);
+		m_cameraMesh = Mesh::create(info, std::move(vertex_buffer), std::move(index_buffer));
 		auto vertexMem = m_cameraMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
 		auto indexMem = m_cameraMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		for (size_t i = 0; i < cameras.size(); i++)
@@ -265,13 +278,26 @@ void Renderer::initializeGeometry()
 	// Volume
 	{
 		vector<Point3f*> corners = m_scene3d.getReconstructor().getCorners();
+
+		Buffer::CreateInfo buffer_info;
+		// Vertex Buffer
+		buffer_info.Size = corners.size() * sizeof(glm::vec3);
+		buffer_info.BufferType = Buffer::Type::Vertex;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "volume vertex buffer";
+		auto vertex_buffer = Buffer::create(buffer_info);
+		// Index Buffer
+		buffer_info.Size = 24 * sizeof(uint32_t);
+		buffer_info.BufferType = Buffer::Type::Index;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "volume index buffer";
+		auto index_buffer = Buffer::create(buffer_info);
+
 		info.Attributes = wireframe_attributes.data();
 		info.AttributeCount = wireframe_attributes.size();
-		info.IndexBufferSize = 24 * sizeof(uint32_t);
-		info.VertexBufferSize = corners.size() * sizeof(glm::vec3);
-		info.MeshTopology = IndexedMesh::Topology::Lines;
+		info.MeshTopology = Mesh::Topology::Lines;
 		info.DebugName = "volume";
-		m_volumeMesh = IndexedMesh::create(info);
+		m_volumeMesh = Mesh::create(info, std::move(vertex_buffer), std::move(index_buffer));
 		auto vertexMem = m_volumeMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
 		auto indexMem = m_volumeMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		auto indexBase = reinterpret_cast<uint32_t*>(indexMem.get());
@@ -311,31 +337,35 @@ void Renderer::initializeGeometry()
 
 	// Origin
 	{
-		const std::vector<IndexedMesh::MeshAttributes> attributes{
-			IndexedMesh::MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 4},
-			IndexedMesh::MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 4},
-		};
 		struct vertex_t
 		{
 		  glm::vec4 position;
 		  glm::vec4 color;
 		};
+		// Vertex Buffer
+		Buffer::CreateInfo buffer_info;
+		buffer_info.Size = 6 * sizeof(vertex_t);
+		buffer_info.BufferType = Buffer::Type::Vertex;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "origin vertex buffer";
+		auto vertex_buffer = Buffer::create(buffer_info);
+
+		const std::vector<Mesh::MeshAttributes> attributes{
+            Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
+            Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
+		};
 		info.Attributes = attributes.data();
 		info.AttributeCount = attributes.size();
-		info.IndexBufferSize = 6 * sizeof(uint32_t);
-		info.VertexBufferSize = 6 * sizeof(vertex_t);
-		info.MeshTopology = IndexedMesh::Topology::Lines;
+		info.MeshTopology = Mesh::Topology::Lines;
 		info.DebugName = "origin";
-		m_wMesh = IndexedMesh::create(info);
-
-		auto vertexMem = m_wMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
-		auto indexMem = m_wMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
+		m_wMesh = Mesh::create(info, std::move(vertex_buffer), nullptr);
 
 		int len = m_scene3d.getSquareSideLen();
 		auto x_len = static_cast<float>(len * (m_scene3d.getBoardSize().height - 1));
 		auto y_len = static_cast<float>(len * (m_scene3d.getBoardSize().width - 1));
 		auto z_len = static_cast<float>(len * 3);
 
+		auto vertexMem = m_wMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
 		auto vertexBase = reinterpret_cast<vertex_t*>(vertexMem.get());
 		vertexBase[0].position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		vertexBase[0].color = glm::vec4(0.0f, 0.0f, 1.0f, 0.5f);
@@ -349,25 +379,32 @@ void Renderer::initializeGeometry()
 		vertexBase[4].color = glm::vec4(1.0f, 0.0f, 0.0f, 0.5f);
 		vertexBase[5].position = glm::vec4(0.0f, 0.0f, z_len, 1.0f);
 		vertexBase[5].color = glm::vec4(1.0f, 0.0f, 0.0f, 0.5f);
-
-		auto indexBase = reinterpret_cast<uint32_t*>(indexMem.get());
-		for (size_t i = 0; i < 6; ++i)
-		{
-			indexBase[i] = i;
-		}
 	}
 
 	// Arcball
 	{
 		constexpr uint8_t stack_count = 24;
 		constexpr uint8_t sector_count = 48;
+
+		Buffer::CreateInfo buffer_info;
+		// Vertex Buffer
+		buffer_info.Size = (stack_count + 1) * (sector_count + 1) * sizeof(glm::vec3);
+		buffer_info.BufferType = Buffer::Type::Vertex;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "arcball vertex buffer";
+		auto vertex_buffer = Buffer::create(buffer_info);
+		// Index Buffer
+		buffer_info.Size = 4 * (stack_count + 1) * (sector_count + 1) * sizeof(uint32_t);
+		buffer_info.BufferType = Buffer::Type::Index;
+		buffer_info.BufferUsage = Buffer::Usage::StaticDraw;
+		buffer_info.DebugName = "arcball index buffer";
+		auto index_buffer = Buffer::create(buffer_info);
+
 		info.Attributes = wireframe_attributes.data();
 		info.AttributeCount = wireframe_attributes.size();
-		info.IndexBufferSize = 4 * (stack_count + 1) * (sector_count + 1) * sizeof(uint32_t);
-		info.VertexBufferSize = (stack_count + 1) * (sector_count + 1) * sizeof(glm::vec3);
-		info.MeshTopology = IndexedMesh::Topology::Lines;
+		info.MeshTopology = Mesh::Topology::Lines;
 		info.DebugName = "arcball";
-		m_arcballMesh = IndexedMesh::create(info);
+		m_arcballMesh = Mesh::create(info, std::move(vertex_buffer), std::move(index_buffer));
 
 		auto vertexMem = m_arcballMesh->getVertexBuffer().map(Buffer::MemoryMapAccess::Write);
 		auto indexMem = m_arcballMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
@@ -419,23 +456,21 @@ void Renderer::initializeGeometry()
 	// Voxels
 	{
 		auto voxel_count = m_scene3d.getReconstructor().getVoxelCount();
-		const std::vector<IndexedMesh::MeshAttributes> attributes{
-			IndexedMesh::MeshAttributes{IndexedMesh::MeshAttributes::DataType::Float, 4},
+		// Vertex Buffer
+		Buffer::CreateInfo buffer_info;
+		buffer_info.Size = voxel_count * sizeof(glm::vec4);
+		buffer_info.BufferType = Buffer::Type::Vertex;
+		buffer_info.BufferUsage = Buffer::Usage::DynamicDraw;
+		buffer_info.DebugName = "voxel vertex buffer";
+		auto vertex_buffer = Buffer::create(buffer_info);
+		const std::vector<Mesh::MeshAttributes> attributes{
+            Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
 		};
 		info.Attributes = attributes.data();
 		info.AttributeCount = attributes.size();
-		info.IndexBufferSize = voxel_count * sizeof(uint32_t);
-		info.VertexBufferSize = voxel_count * sizeof(glm::vec4);
-		info.DynamicVertices = true;  // Data will be uploaded at every frame
-		info.MeshTopology = IndexedMesh::Topology::Points;
+		info.MeshTopology = Mesh::Topology::Points;
 		info.DebugName = "voxels";
-		m_voxelMesh = IndexedMesh::create(info);
-		auto indexMem = m_voxelMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
-		auto indexBase = reinterpret_cast<uint32_t*>(indexMem.get());
-		for (size_t i = 0; i < voxel_count; ++i)
-		{
-			indexBase[i] = i;
-		}
+		m_voxelMesh = Mesh::create(info, std::move(vertex_buffer), nullptr);
 	}
 }
 

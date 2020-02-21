@@ -9,7 +9,7 @@
 class Buffer;
 
 /// Wrapper for OpenGL Vertex Array Buffers
-class IndexedMesh {
+class Mesh {
   public:
     enum Topology
     {
@@ -40,34 +40,31 @@ class IndexedMesh {
     struct CreateInfo {
         const MeshAttributes* Attributes;
         uint32_t AttributeCount;
-        uint32_t VertexBufferSize;
-        uint32_t IndexBufferSize;
-        bool DynamicVertices;
         Topology MeshTopology;
         std::string_view DebugName;
     };
     std::unique_ptr<Buffer> vertex_buffer_;
     std::unique_ptr<Buffer> index_buffer_;
     const uint32_t vao_;
-    const uint32_t element_count;
-    const Topology topology;
+    const uint32_t element_count_;
+    const Topology topology_;
 
     /// General factory function only accepts uint32_t indices
-    static std::unique_ptr<IndexedMesh> create(const CreateInfo& info);
+    static std::unique_ptr<Mesh> create(const CreateInfo& info, std::unique_ptr<Buffer>&& vertex_buffer, std::unique_ptr<Buffer>&& index_buffer);
     /// Factory function for generating a full screen quad with positions
     /// encoded in the screen space coordinates
-    static std::unique_ptr<IndexedMesh>
+    static std::unique_ptr<Mesh>
     createFullscreenQuad(const std::string_view& debug_name);
     /// Factory function for creating a tri-color unit axis centered at 0
     /// with each arm extending at 1 in every axis.
-    static std::unique_ptr<IndexedMesh>
+    static std::unique_ptr<Mesh>
     createAxis(const std::string_view& debug_name);
     /// Factory function for creating a 1 unit cube with one vertex at the origin,
     /// every vertex with positive values in each axis and side length of 1.
-    static std::unique_ptr<IndexedMesh>
+    static std::unique_ptr<Mesh>
     createCube(const std::string_view& debug_name);
 
-    virtual ~IndexedMesh();
+    virtual ~Mesh();
     /// Draw the indexed mesh using opengl
     void draw() const;
     void draw(uint32_t count) const;
@@ -80,6 +77,6 @@ class IndexedMesh {
   private:
     /// Private unique constructor forcing the use of factory function which
     /// can return null unlike constructor.
-    IndexedMesh(std::unique_ptr<Buffer>&& vertex_buffer, std::unique_ptr<Buffer>&& index_buffer,
-                uint32_t vao, uint32_t element_count, Topology topology);
+    Mesh(std::unique_ptr<Buffer>&& vertex_buffer, std::unique_ptr<Buffer>&& index_buffer,
+         uint32_t vao, uint32_t element_count, Topology topology);
 };

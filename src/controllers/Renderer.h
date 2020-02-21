@@ -12,7 +12,7 @@
 
 #include "ArcBall.h"
 
-class IndexedMesh;
+class Mesh;
 class Pipeline;
 class Context;
 class RenderPass;
@@ -52,12 +52,12 @@ private:
   std::unique_ptr<Pipeline> m_wPipeline;
   std::unique_ptr<Pipeline> m_arcballPipeline;
   std::unique_ptr<Pipeline> m_voxelPipeline;
-  std::unique_ptr<IndexedMesh> m_gridMesh;
-  std::unique_ptr<IndexedMesh> m_cameraMesh;
-  std::unique_ptr<IndexedMesh> m_volumeMesh;
-  std::unique_ptr<IndexedMesh> m_wMesh;
-  std::unique_ptr<IndexedMesh> m_voxelMesh;
-  std::unique_ptr<IndexedMesh> m_arcballMesh;
+  std::unique_ptr<Mesh> m_gridMesh;
+  std::unique_ptr<Mesh> m_cameraMesh;
+  std::unique_ptr<Mesh> m_volumeMesh;
+  std::unique_ptr<Mesh> m_wMesh;
+  std::unique_ptr<Mesh> m_voxelMesh;
+  std::unique_ptr<Mesh> m_arcballMesh;
   glm::mat4 m_viewMatrix;
   glm::mat4 m_projectionMatrix;
 };

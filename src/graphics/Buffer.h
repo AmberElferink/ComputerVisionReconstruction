@@ -44,11 +44,12 @@ public:
     void bind();
 
 private:
-    Buffer(uint32_t handle, uint32_t target);
+    Buffer(uint32_t handle, uint32_t target, uint32_t size);
 
-    uint32_t handle_;
-    uint32_t target_;
-    friend class IndexedMesh;
+    const uint32_t handle_;
+    const uint32_t target_;
+    const uint32_t size_;
+    friend class Mesh;
 };
 
 #endif  // GRAPHICS_BUFFER_H
