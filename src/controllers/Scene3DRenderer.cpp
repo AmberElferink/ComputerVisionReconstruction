@@ -16,6 +16,7 @@
 
 #include "../utilities/General.h"
 
+
 using namespace std;
 using namespace cv;
 
@@ -47,6 +48,9 @@ Scene3DRenderer::Scene3DRenderer(
 	m_show_info = true;
 	m_fullscreen = false;
 
+	foregroundOptimizer = std::unique_ptr<ForegroundOptimizer>(new ForegroundOptimizer(1));
+
+
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
 	fs.open(m_cameras.front()->getDataPath() + ".." + string(PATH_SEP) + General::CBConfigFile, FileStorage::READ);
@@ -65,15 +69,35 @@ Scene3DRenderer::Scene3DRenderer(
 	m_current_frame = 0;
 	m_previous_frame = -1;
 
-	const int H = 0;
-	const int S = 0;
-	const int V = 0;
+	const int H = 13;
+	const int S = 255;
+	const int V = 255;
 	m_h_threshold = H;
 	m_ph_threshold = H;
 	m_s_threshold = S;
 	m_ps_threshold = S;
 	m_v_threshold = V;
 	m_pv_threshold = V;
+
+	m_cameras[0]->advanceVideoFrame();
+	assert(!m_cameras[0]->getFrame().empty());
+	Mat hsv_image;
+	cvtColor(m_cameras[0]->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
+
+	std::vector<cv::Mat> channels;
+	cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
+
+	foregroundOptimizer->optimizeThresholds(
+		5,
+		13,
+		m_cameras[0]->getBgHsvChannels().at(0),
+		m_cameras[0]->getBgHsvChannels().at(1),
+		m_cameras[0]->getBgHsvChannels().at(2),
+		channels,
+		m_h_threshold,
+		m_s_threshold,
+		m_v_threshold
+	);
 
 	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
 	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
@@ -116,37 +140,39 @@ bool Scene3DRenderer::processFrame()
 	return true;
 }
 
+
+
 /**
  * Separate the background from the foreground
  * ie.: Create an 8 bit image where only the foreground of the scene is white (255)
  */
-void Scene3DRenderer::processForeground(
-		Camera* camera)
+void Scene3DRenderer::processForeground(Camera* camera)
 {
 	assert(!camera->getFrame().empty());
 	Mat hsv_image;
 	cvtColor(camera->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
-	vector<Mat> channels;
-	split(hsv_image, channels);  // Split the HSV-channels for further analysis
+	std::vector<cv::Mat> channels;
+	cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
 
-	// Background subtraction H
-	Mat tmp, foreground, background;
-	absdiff(channels[0], camera->getBgHsvChannels().at(0), tmp);
-	threshold(tmp, foreground, m_h_threshold, 255, CV_THRESH_BINARY);
+	cv::Mat foreground = foregroundOptimizer->runHSVThresholding(
+		camera->getBgHsvChannels().at(0), 
+		camera->getBgHsvChannels().at(1), 
+		camera->getBgHsvChannels().at(2), 
+		channels,
+		m_h_threshold,
+		m_s_threshold,
+		m_v_threshold
+	);
 
-	// Background subtraction S
-	absdiff(channels[1], camera->getBgHsvChannels().at(1), tmp);
-	threshold(tmp, background, m_s_threshold, 255, CV_THRESH_BINARY);
-	bitwise_and(foreground, background, foreground);
+	foregroundOptimizer->FindContours(foreground);
+	foregroundOptimizer->SaveMaxContours();
+	//foregroundOptimizer->DrawMaxContours(foreground, true, 255);
 
-	// Background subtraction V
-	absdiff(channels[2], camera->getBgHsvChannels().at(2), tmp);
-	threshold(tmp, background, m_v_threshold, 255, CV_THRESH_BINARY);
-	bitwise_or(foreground, background, foreground);
+
+	
 
 	// Improve the foreground image
-
 	camera->setForegroundImage(foreground);
 }
 

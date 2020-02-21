@@ -44,6 +44,8 @@ set(SOURCE_FILES
 	src/controllers/Glut.cpp
 	src/controllers/Reconstructor.cpp
 	src/controllers/Scene3DRenderer.cpp
+	src/controllers/ForegroundOptimizer.cpp
+	src/controllers/ForegroundOptimizer.h
 	src/main.cpp
 	src/utilities/General.cpp
 	src/VoxelReconstruction.cpp)

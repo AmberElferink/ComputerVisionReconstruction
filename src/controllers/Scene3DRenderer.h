@@ -18,12 +18,14 @@
 #include "arcball.h"
 #include "Camera.h"
 #include "Reconstructor.h"
+#include "ForegroundOptimizer.h"
 
 namespace nl_uu_science_gmt
 {
 
 class Scene3DRenderer
 {
+	std::unique_ptr<ForegroundOptimizer> foregroundOptimizer;
 	Reconstructor &m_reconstructor;          // Reference to Reconstructor
 	const std::vector<Camera*> &m_cameras;  // Reference to camera's vector
 	const int m_num;                        // Floor grid scale
