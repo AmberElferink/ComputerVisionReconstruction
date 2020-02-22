@@ -410,6 +410,10 @@ constexpr std::string_view marchingCubeComputeShaderSource =
 	"    uint first;\n"
 	"    uint baseInstance;\n"
 	"};\n"
+	"struct vertex_t {\n"
+	"    vec4 position;\n"
+	"    vec4 normal;\n"
+	"};\n"
 	"layout(std430, binding = 0) buffer indirect_data\n"
 	"{\n"
 	"    DrawArraysIndirectCommand indirectData;\n"
@@ -424,7 +428,7 @@ constexpr std::string_view marchingCubeComputeShaderSource =
 	"};\n"
 	"layout(std430, binding = 3) buffer vertex_data\n"
 	"{\n"
-	"    vec4 vertices[];\n"
+	"    vertex_t vertices[];\n"
 	"};\n"
 	"vec4 positions[8] = {\n"
 	"    vec4(0, 0, 0, 1),\n"
@@ -499,9 +503,15 @@ constexpr std::string_view marchingCubeComputeShaderSource =
 	"    }\n"
 	"    for (uint i = 0; triTable[classification * 16 + i] != -1; i += 3) {\n"
 	"        uint index = atomicAdd(indirectData.count, 3);\n"
-	"        vertices[index] = vertlist[triTable[classification * 16 + i]] + vec4(gl_GlobalInvocationID, 0);\n"
-	"        vertices[index + 1] = vertlist[triTable[classification * 16 + i + 1]] + vec4(gl_GlobalInvocationID, 0);\n"
-	"        vertices[index + 2] = vertlist[triTable[classification * 16 + i + 2]] + vec4(gl_GlobalInvocationID, 0);\n"
+	"        vertices[index].position = vertlist[triTable[classification * 16 + i]] + vec4(gl_GlobalInvocationID, 0);\n"
+	"        vertices[index + 1].position = vertlist[triTable[classification * 16 + i + 1]] + vec4(gl_GlobalInvocationID, 0);\n"
+	"        vertices[index + 2].position = vertlist[triTable[classification * 16 + i + 2]] + vec4(gl_GlobalInvocationID, 0);\n"
+	"        vec3 a = normalize(vertices[index].position.xyz - vertices[index + 1].position.xyz);\n"
+	"        vec3 b = normalize(vertices[index].position.xyz - vertices[index + 2].position.xyz);\n"
+	"        vec4 normal = vec4(normalize(cross(a, b)), 0);\n"
+	"        vertices[index].normal = normal;\n"
+	"        vertices[index + 1].normal = normal;\n"
+	"        vertices[index + 2].normal = normal;\n"
 	"    }\n"
 	"}\n";
 
@@ -512,18 +522,37 @@ constexpr std::string_view voxelVertexShaderSource =
 	"uniform float scale;\n"
 	"uniform vec3 offset;\n"
 	"layout (location = 0) in vec4 position;\n"
+	"layout (location = 1) in vec4 normal;\n"
+	"layout (location = 0) out vec4 out_position;\n"
+	"layout (location = 1) out vec3 out_normal;\n"
 	"void main()\n"
 	"{\n"
-	"    gl_Position = proj * view * vec4(position.xyz * scale + offset, position.w);\n"
+	"    out_position = vec4(position.xyz * scale + offset, position.w);\n"
+	"    out_normal = normal.xyz;\n"
+	"    gl_Position = proj * view * out_position;\n"
 	"}\n";
 
 constexpr std::string_view voxelFragmentShaderSource =
 	"#version 450 core\n"
+	"layout (location = 0) in vec4 position;\n"
+	"layout (location = 1) in vec3 normal;\n"
 	"layout (location = 0) out vec4 out_color;\n"
+	"uniform float light_intensity;\n"
+	"uniform vec3 light_position;\n"
+	"uniform vec3 color;\n"
 	"void main()\n"
 	"{\n"
-	"    out_color = vec4(0.5f, 0.5f, 0.5f, 0.5f);\n"
+	"    vec4 dir = vec4(light_position, 1.0) - position;\n"
+	"    vec3 viewDir = -normalize(position.xyz);\n"
+	"    float dist2 = dot(dir, dir);\n"
+	"    dir = normalize(dir);\n"
+	"    vec3 reflectDir = reflect(-dir.xyz, normal);\n"
+	"    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
+	"    float lightIntensity = light_intensity * (clamp(dot(dir.xyz, normal), 0.0f, 1.0f) * 0.6f + spec) / dist2 + 0.4;\n"
+	"    out_color.rgb = lightIntensity * color;\n"
+	"    out_color.a = 1.0f;\n"
 	"}\n";
+
 
 Renderer::Renderer(Scene3DRenderer &s3d)
 	: m_scene3d(s3d)
@@ -545,8 +574,8 @@ void Renderer::initialize(const char* win_name, int argc, char** argv)
 	passInfo.ClearColor[1] = 1.0f;
 	passInfo.ClearColor[2] = 1.0f;
 	passInfo.ClearColor[3] = 1.0f;
-	passInfo.DepthWrite = false;
-	passInfo.DepthTest = false;
+	passInfo.DepthWrite = true;
+	passInfo.DepthTest = true;
 	passInfo.DebugName = "Main Render Pass";
 	m_renderPass = RenderPass::create(passInfo);
 
@@ -864,16 +893,22 @@ void Renderer::initializeGeometry()
 
 	// Voxels using marching cubes via indirect calls through compute shader
 	{
+		struct vertex_t
+		{
+			glm::vec4 position;
+			glm::vec4 normal;
+		};
 		Buffer::CreateInfo buffer_info;
 
 		// Vertex Buffer
 		// 15 possible vertex per voxel
-		buffer_info.Size = sizeof(glm::vec4) * 15 * m_scene3d.getReconstructor().getVoxelCount();
+		buffer_info.Size = sizeof(vertex_t) * 15 * m_scene3d.getReconstructor().getVoxelCount();
 		buffer_info.BufferType = Buffer::Type ::ShaderStorage;
 		buffer_info.BufferUsage = Buffer::Usage::DynamicDraw;
 		buffer_info.DebugName = "voxel vertex buffer";
 		auto vertex_buffer = Buffer::create(buffer_info);
 		const std::vector<Mesh::MeshAttributes> attributes{
+			Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
 			Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
 		};
 		info.Attributes = attributes.data();
@@ -1051,10 +1086,7 @@ void Renderer::mouse(const SDL_Event& event, bool& mouse_down)
 	switch (event.type)
 	{
 	case SDL_MOUSEWHEEL:
-		if (!m_scene3d.isCameraView())
-		{
-			m_arc_ball.add_distance(event.wheel.y * 250.0f);
-		}
+		m_arc_ball.add_distance(event.wheel.y * 250.0f);
 		break;
 	case SDL_MOUSEBUTTONDOWN:
 		m_arc_ball.start({event.motion.x, m_scene3d.getHeight() - event.motion.y - 1});
@@ -1130,6 +1162,11 @@ void Renderer::display()
 	m_voxelPipeline->setUniform("proj", m_projectionMatrix);
 	m_voxelPipeline->setUniform("scale", (float)m_scene3d.getReconstructor().getVoxelSize());
 	m_voxelPipeline->setUniform("offset", glm::vec3(offset[0], offset[1], offset[2]));
+	auto camera = m_scene3d.getCameras()[std::clamp(m_scene3d.getCurrentCamera(), 0, (int)m_scene3d.getCameras().size() - 1)];
+	auto camera_location = camera->getCameraLocation();
+	m_voxelPipeline->setUniform("light_position", glm::vec3(camera_location.x, camera_location.y, camera_location.x));
+	m_voxelPipeline->setUniform("light_intensity", 40000000.0f);
+	m_voxelPipeline->setUniform("color", glm::vec3(0.5f, 0.5f, 0.5f));
 	m_voxelMesh->draw(*m_indirectBuffer);
 
 	if (m_scene3d.isShowOrg())
