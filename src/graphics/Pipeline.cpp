@@ -7,8 +7,6 @@
 
 std::unique_ptr<Pipeline> Pipeline::create(const Pipeline::GraphicsCreateInfo& info) {
     // Bind state which would force a recompile of the shader
-    glLineWidth(info.LineWidth);
-
     uint32_t vertexShader = glCreateShader(GL_VERTEX_SHADER);
     if (vertexShader < 0) {
         return nullptr;
@@ -82,7 +80,7 @@ std::unique_ptr<Pipeline> Pipeline::create(const Pipeline::GraphicsCreateInfo& i
     }
 
     return std::unique_ptr<Pipeline>(
-        new GraphicsPipeline(program, info.ViewportWidth, info.ViewportHeight, info.LineWidth));
+        new GraphicsPipeline(program, info.ViewportWidth, info.ViewportHeight));
 }
 
 std::unique_ptr<Pipeline> Pipeline::create(const Pipeline::ComputeCreateInfo& info) {
