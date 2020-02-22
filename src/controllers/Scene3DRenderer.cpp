@@ -71,7 +71,7 @@ Scene3DRenderer::Scene3DRenderer(
 
 	
 
-	const int H = 13;
+	const int H = 0;
 	const int S = 255;
 	const int V = 255;
 	m_h_threshold = H;

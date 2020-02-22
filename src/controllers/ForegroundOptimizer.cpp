@@ -7,7 +7,7 @@ void ForegroundOptimizer::optimizeThresholds(int maxExtraContoursS, int maxExtra
 {
 	contours.clear();
 	int lastMergedContours_i = 255;
-	int lastNrContours = 10e10;
+	int lastNrContours = std::numeric_limits<int>::max() - 1000;
 	//optimize V
 	for (int i = 255; i > 5; i -= 5)
 	{
@@ -33,7 +33,7 @@ void ForegroundOptimizer::optimizeThresholds(int maxExtraContoursS, int maxExtra
 
 	contours.clear();
 	lastMergedContours_i = 255;
-	lastNrContours = 10e10;
+	lastNrContours = std::numeric_limits<int>::max() - 1000;
 	//optimize S
 	for (int i = 255; i > 5; i -= 5)
 	{
@@ -49,13 +49,15 @@ void ForegroundOptimizer::optimizeThresholds(int maxExtraContoursS, int maxExtra
 			s_threshold = lastMergedContours_i;
 			break;
 		}
+		
 		else if (currNrContours <= lastNrContours)
 		{
 			lastMergedContours_i = i;
 		}
-
+	
 		lastNrContours = currNrContours;
 	}
+	
 }
 
 cv::Mat ForegroundOptimizer::runHSVThresholding(const cv::Mat& h_image, const cv::Mat& s_image, const cv::Mat& v_image, std::vector<cv::Mat>& channels, int h_threshold, int s_threshold, int v_threshold)
