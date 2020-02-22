@@ -80,7 +80,7 @@ Scene3DRenderer::Scene3DRenderer(
 	m_ps_threshold = S;
 	m_v_threshold = V;
 	m_pv_threshold = V;
-	m_thresholdMaxNoise = 10;
+	m_thresholdMaxNoise = 15;
 
 	calibThresholds();
 
