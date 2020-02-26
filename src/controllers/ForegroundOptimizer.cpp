@@ -108,10 +108,16 @@ void ForegroundOptimizer::SaveMaxContours()
 	std::fill(maxContourAreas.begin(), maxContourAreas.end(), 0);
 	maxContourIndices.clear();
 	maxContourIndices.resize(nrContoursTracked);
+	blackContours.clear();
 	
 	for (int i = 0; i < contours.size(); i++)
 	{
-		double area = -contourArea(contours[i], true); // negative means white apparently, and you want white
+		double areaBlackPositive = contourArea(contours[i], true);
+		if (areaBlackPositive > 20)
+		{
+			blackContours.push_back(i);
+		}
+		double area = -areaBlackPositive; // negative means white apparently, and you want white
 		if (area > maxContourAreas[nrContoursTracked - 1]) 
 		{
 			saveMaxContour(area, i);
@@ -129,6 +135,10 @@ void ForegroundOptimizer::DrawMaxContours(cv::Mat& image, bool removeBackground,
 		for (int i = 0; i < nrContoursTracked; i++)
 		{
 			cv::drawContours(image, contours, maxContourIndices[i], color, cv::FILLED);
+		}
+		for (int i = 0; i < blackContours.size(); i++)
+		{
+			cv::drawContours(image, contours, blackContours[i], cv::Scalar(0), cv::FILLED); //draw black contours over the white ones (holes between the legs, etc)
 		}
 	}
 	else

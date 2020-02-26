@@ -48,7 +48,7 @@ Scene3DRenderer::Scene3DRenderer(
 	m_show_info = true;
 	m_fullscreen = false;
 
-	foregroundOptimizer = std::unique_ptr<ForegroundOptimizer>(new ForegroundOptimizer(1));
+	foregroundOptimizer = std::unique_ptr<ForegroundOptimizer>(new ForegroundOptimizer(4));
 
 
 	// Read the checkerboard properties (XML)
@@ -72,8 +72,8 @@ Scene3DRenderer::Scene3DRenderer(
 	
 
 	const int H = 0;
-	const int S = 255;
-	const int V = 255;
+	const int S = 19;
+	const int V = 48;
 	m_h_threshold = H;
 	m_ph_threshold = H;
 	m_s_threshold = S;
@@ -82,7 +82,7 @@ Scene3DRenderer::Scene3DRenderer(
 	m_pv_threshold = V;
 	m_thresholdMaxNoise = 15;
 
-	calibThresholds();
+	//calibThresholds();
 
 	updateTrackbars();
 
