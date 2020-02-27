@@ -42,6 +42,7 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 # 
 # #############################################
 
+add_subdirectory(libs)
 add_subdirectory(apps)
 add_subdirectory(thirdparty/glad)
 add_subdirectory(thirdparty/imgui-1.75)
@@ -57,9 +58,7 @@ set(SOURCE_FILES
 	src/graphics/Texture.cpp
 	src/graphics/Ui.cpp
 	src/controllers/ArcBall.cpp
-	src/controllers/Camera.cpp
 	src/controllers/Renderer.cpp
-	src/controllers/Reconstructor.cpp
 	src/controllers/Scene3DRenderer.cpp
 	src/controllers/ForegroundOptimizer.cpp
 	src/controllers/ForegroundOptimizer.h
@@ -149,9 +148,8 @@ target_link_libraries (${CMAKE_PROJECT_NAME}
 		glad
 		imgui
 		glm
+		reconstructor
 		OpenGL::GL
-		Threads::Threads
-		OpenMP::OpenMP_CXX
 		${SDL2_LIBRARIES}
 		${OpenCV_LIBS})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS})

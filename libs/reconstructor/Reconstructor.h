@@ -9,7 +9,7 @@
 #define RECONSTRUCTOR_H_
 
 #include <opencv2/core/core.hpp>
-#include <stddef.h>
+#include <cstddef>
 #include <vector>
 
 #include "Camera.h"
@@ -43,8 +43,8 @@ private:
 	size_t m_voxels_amount;                 // Voxel count
 	cv::Size m_plane_size;                  // Camera FoV plane WxH
 
-	std::vector<Voxel*> m_voxels;           // Pointer vector to all voxels in the half-space
-	std::vector<Voxel*> m_visible_voxels;   // Pointer vector to all visible voxels
+	std::vector<Voxel> m_voxels;           // Pointer vector to all voxels in the half-space
+	std::vector<uint32_t> m_visible_voxels_indices;   // Pointer vector to all visible voxels
 	std::vector<float> m_scalar_field;      // Values for each point in the half-space
 
 	void initialize();
@@ -76,12 +76,12 @@ public:
 		return m_step;
 	}
 
-	const std::vector<Voxel*>& getVisibleVoxels() const
+	const std::vector<uint32_t>& getVisibleVoxelIndices() const
 	{
-		return m_visible_voxels;
+		return m_visible_voxels_indices;
 	}
 
-	const std::vector<Voxel*>& getVoxels() const
+	const std::vector<Voxel>& getVoxels() const
 	{
 		return m_voxels;
 	}
@@ -89,18 +89,6 @@ public:
 	const std::vector<float>& getScalarField() const
 	{
 		return m_scalar_field;
-	}
-
-	void setVisibleVoxels(
-			const std::vector<Voxel*>& visibleVoxels)
-	{
-		m_visible_voxels = visibleVoxels;
-	}
-
-	void setVoxels(
-			const std::vector<Voxel*>& voxels)
-	{
-		m_voxels = voxels;
 	}
 
 	const std::vector<cv::Point3f*>& getCorners() const

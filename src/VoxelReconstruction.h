@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <vector>
 
-#include "controllers/Camera.h"
+#include <Camera.h>
 
 namespace nl_uu_science_gmt
 {

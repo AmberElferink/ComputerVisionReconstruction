@@ -14,7 +14,7 @@
 #include <utility>
 
 #include "controllers/Renderer.h"
-#include "controllers/Reconstructor.h"
+#include <Reconstructor.h>
 #include "controllers/Scene3DRenderer.h"
 #include "utilities/General.h"
 
