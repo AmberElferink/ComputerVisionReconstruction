@@ -61,18 +61,11 @@ VoxelReconstruction::VoxelReconstruction(std::filesystem::path dp, int cva) :
 			 : true)
 		);
 
-		m_cam_views.push_back(new Camera(full_path, General::ConfigFile.data(), v));
+		m_cam_views.emplace_back(full_path, General::ConfigFile.data(), v);
 	}
 }
 
-/**
- * Main destructor, cleans up pointer vector memory of the cameras
- */
-VoxelReconstruction::~VoxelReconstruction()
-{
-	for (auto & m_cam_view : m_cam_views)
-		delete m_cam_view;
-}
+VoxelReconstruction::~VoxelReconstruction() = default;
 
 /**
  * What you can hit
@@ -108,10 +101,10 @@ void VoxelReconstruction::run(int argc, char** argv)
 {
 	for (int v = 0; v < m_cam_views_amount; ++v)
 	{
-		bool has_cam = Camera::detExtrinsics(m_cam_views[v]->getDataPath(), General::CBConfigFile, General::CheckerboadCorners, General::CheckerboadVideo.data(),
-											 General::IntrinsicsFile.data(), m_cam_views[v]->getCamPropertiesFile());
+		bool has_cam = Camera::detExtrinsics(m_cam_views[v].getDataPath(), General::CBConfigFile, General::CheckerboadCorners, General::CheckerboadVideo.data(),
+											 General::IntrinsicsFile.data(), m_cam_views[v].getCamPropertiesFile());
 		if (has_cam) {
-			has_cam = m_cam_views[v]->initialize(General::BackgroundImageFile, General::VideoFile);
+			has_cam = m_cam_views[v].initialize(General::BackgroundImageFile, General::VideoFile);
 		} else {
 			assert(false);
 		}

@@ -664,7 +664,7 @@ void Renderer::initializeGeometry()
 
 	// Camera
 	{
-		vector<Camera*> cameras = m_scene3d.getCameras();
+		const vector<Camera>& cameras = m_scene3d.getCameras();
 
 		Buffer::CreateInfo buffer_info;
 		// Vertex Buffer
@@ -689,7 +689,7 @@ void Renderer::initializeGeometry()
 		auto indexMem = m_cameraMesh->getIndexBuffer().map(Buffer::MemoryMapAccess::Write);
 		for (size_t i = 0; i < cameras.size(); i++)
 		{
-			vector<Point3f> plane = cameras[i]->getCameraPlane();
+			vector<Point3f> plane = cameras[i].getCameraPlane();
 			// 16 indices * camera.size()
 			auto indexBase = &reinterpret_cast<uint32_t*>(indexMem.get())[i * 16];
 			indexBase[0] = i * 5;
@@ -1165,7 +1165,7 @@ void Renderer::display()
 	m_voxelPipeline->setUniform("scale", (float)m_scene3d.getReconstructor().getVoxelSize());
 	m_voxelPipeline->setUniform("offset", glm::vec3(offset[0], offset[1], offset[2]));
 	auto camera = m_scene3d.getCameras()[std::clamp(m_scene3d.getCurrentCamera(), 0, (int)m_scene3d.getCameras().size() - 1)];
-	auto camera_location = camera->getCameraLocation();
+	auto camera_location = camera.getCameraLocation();
 	m_voxelPipeline->setUniform("light_position", glm::vec3(camera_location.x, camera_location.y, camera_location.x));
 	m_voxelPipeline->setUniform("light_intensity", 40000000.0f);
 	m_voxelPipeline->setUniform("color", glm::vec3(0.5f, 0.5f, 0.5f));
@@ -1182,12 +1182,13 @@ void Renderer::display()
 	if (m_scene3d.isShowInfo())
 	{
 		std::vector<std::pair<glm::vec2, std::string>> labels;
-		vector<Camera*> cameras = m_scene3d.getCameras();
+		const vector<Camera>& cameras = m_scene3d.getCameras();
 		for (size_t c = 0; c < cameras.size(); ++c)
 		{
 			glm::ivec4 viewport = glm::ivec4(0, 0, 0, 0);
 			m_renderer->getSize(viewport.z, viewport.w);
-			glm::vec3 position(cameras[c]->getCameraLocation().x, cameras[c]->getCameraLocation().y, cameras[c]->getCameraLocation().z);
+			auto& location = cameras[c].getCameraLocation();
+			glm::vec3 position(location.x, location.y, location.z);
 			auto screen_pos = glm::project(position, m_viewMatrix, m_projectionMatrix, viewport);
 			labels.emplace_back(glm::vec2(screen_pos.x, viewport.w - screen_pos.y), std::to_string(c + 1));
 		}
@@ -1208,67 +1209,66 @@ void Renderer::update()
 	// Update the opencv image
 	waitKey(10);
 
-	Scene3DRenderer& scene3d = m_scene3d;
-	if (scene3d.isQuit())
+	if (m_scene3d.isQuit())
 	{
 		// Quit signaled
 		quit();
 	}
-	if (scene3d.getCurrentFrame() > scene3d.getNumberOfFrames() - 2)
+	if (m_scene3d.getCurrentFrame() > m_scene3d.getNumberOfFrames() - 2)
 	{
 		// Go to the start of the video if we've moved beyond the end
-		scene3d.setCurrentFrame(0);
-		for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
-			scene3d.getCameras()[c]->setVideoFrame(scene3d.getCurrentFrame());
+		m_scene3d.setCurrentFrame(0);
+		for (size_t c = 0; c < m_scene3d.getCameras().size(); ++c)
+			m_scene3d.getCameras()[c].setVideoFrame(m_scene3d.getCurrentFrame());
 	}
-	if (scene3d.getCurrentFrame() < 0)
+	if (m_scene3d.getCurrentFrame() < 0)
 	{
 		// Go to the end of the video if we've moved before the start
-		scene3d.setCurrentFrame(scene3d.getNumberOfFrames() - 2);
-		for (size_t c = 0; c < scene3d.getCameras().size(); ++c)
-			scene3d.getCameras()[c]->setVideoFrame(scene3d.getCurrentFrame());
+		m_scene3d.setCurrentFrame(m_scene3d.getNumberOfFrames() - 2);
+		for (size_t c = 0; c < m_scene3d.getCameras().size(); ++c)
+			m_scene3d.getCameras()[c].setVideoFrame(m_scene3d.getCurrentFrame());
 	}
-	if (!scene3d.isPaused())
+	if (!m_scene3d.isPaused())
 	{
 		// If not paused move to the next frame
-		scene3d.setCurrentFrame(scene3d.getCurrentFrame() + 1);
+		m_scene3d.setCurrentFrame(m_scene3d.getCurrentFrame() + 1);
 	}
-	if (scene3d.getCurrentFrame() != scene3d.getPreviousFrame())
+	if (m_scene3d.getCurrentFrame() != m_scene3d.getPreviousFrame())
 	{
 		// If the current frame is different from the last iteration update stuff
-		scene3d.processFrame();
-		scene3d.getReconstructor().update();
-		scene3d.setPreviousFrame(scene3d.getCurrentFrame());
+		m_scene3d.processFrame();
+		m_scene3d.getReconstructor().update();
+		m_scene3d.setPreviousFrame(m_scene3d.getCurrentFrame());
 	}
-	else if (scene3d.getHThreshold() != scene3d.getPHThreshold() || scene3d.getSThreshold() != scene3d.getPSThreshold()
-			|| scene3d.getVThreshold() != scene3d.getPVThreshold())
+	else if (m_scene3d.getHThreshold() != m_scene3d.getPHThreshold() || m_scene3d.getSThreshold() != m_scene3d.getPSThreshold()
+			|| m_scene3d.getVThreshold() != m_scene3d.getPVThreshold())
 	{
 		// Update the scene if one of the HSV sliders was moved (when the video is paused)
-		scene3d.processFrame();
-		scene3d.getReconstructor().update();
+		m_scene3d.processFrame();
+		m_scene3d.getReconstructor().update();
 
-		scene3d.setPHThreshold(scene3d.getHThreshold());
-		scene3d.setPSThreshold(scene3d.getSThreshold());
-		scene3d.setPVThreshold(scene3d.getVThreshold());
+		m_scene3d.setPHThreshold(m_scene3d.getHThreshold());
+		m_scene3d.setPSThreshold(m_scene3d.getSThreshold());
+		m_scene3d.setPVThreshold(m_scene3d.getVThreshold());
 	}
 
 	// Auto rotate the scene
-	if (scene3d.isRotate())
+	if (m_scene3d.isRotate())
 	{
 		m_arc_ball.add_angle(2);
 	}
 
 	// Get the image and the foreground image (of set camera)
 	Mat canvas, foreground;
-	if (scene3d.getCurrentCamera() != -1)
+	if (m_scene3d.getCurrentCamera() != -1)
 	{
-		canvas = scene3d.getCameras()[scene3d.getCurrentCamera()]->getFrame();
-		foreground = scene3d.getCameras()[scene3d.getCurrentCamera()]->getForegroundImage();
+		canvas = m_scene3d.getCameras()[m_scene3d.getCurrentCamera()].getFrame();
+		foreground = m_scene3d.getCameras()[m_scene3d.getCurrentCamera()].getForegroundImage();
 	}
 	else
 	{
-		canvas = scene3d.getCameras()[scene3d.getPreviousCamera()]->getFrame();
-		foreground = scene3d.getCameras()[scene3d.getPreviousCamera()]->getForegroundImage();
+		canvas = m_scene3d.getCameras()[m_scene3d.getPreviousCamera()].getFrame();
+		foreground = m_scene3d.getCameras()[m_scene3d.getPreviousCamera()].getForegroundImage();
 	}
 
 	// Concatenate the video frame with the foreground image (of set camera)
@@ -1285,9 +1285,9 @@ void Renderer::update()
 	}
 
 	// Update the frame slider position
-	setTrackbarPos("Frame", VIDEO_WINDOW.data(), scene3d.getCurrentFrame());
+	setTrackbarPos("Frame", VIDEO_WINDOW.data(), m_scene3d.getCurrentFrame());
 
-	auto& scalarField = scene3d.getReconstructor().getScalarField();
+	auto& scalarField = m_scene3d.getReconstructor().getScalarField();
 	m_scalarField->upload(scalarField.data(), scalarField.size() * sizeof(scalarField[0]));
 }
 

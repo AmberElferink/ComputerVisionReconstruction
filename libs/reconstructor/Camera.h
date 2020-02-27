@@ -80,7 +80,7 @@ public:
 							  const std::string &out_fname);
 
 	static cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &);
-	cv::Point projectOnView(const cv::Point3f &);
+	cv::Point projectOnView(const cv::Point3f &) const;
 
 	const std::filesystem::path& getCamPropertiesFile() const
 	{

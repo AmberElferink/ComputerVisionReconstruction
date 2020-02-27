@@ -1,8 +1,6 @@
 #include <cstdlib>
-#include <string>
 #include <filesystem>
 
-#include "utilities/General.h"
 #include "VoxelReconstruction.h"
 
 using namespace nl_uu_science_gmt;

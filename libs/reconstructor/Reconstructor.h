@@ -33,7 +33,7 @@ public:
 	};
 
 private:
-	const std::vector<Camera*> &m_cameras;  // vector of pointers to cameras
+	const std::vector<Camera> &m_cameras;  // vector of pointers to cameras
 	const int m_height;                     // Cube half-space height from floor to ceiling
 	const int m_step;                       // Step size (space between voxels)
 
@@ -51,7 +51,7 @@ private:
 
 public:
 	Reconstructor(
-			const std::vector<Camera*> &);
+			const std::vector<Camera>&);
 	virtual ~Reconstructor();
 
 	void update();

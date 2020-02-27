@@ -28,7 +28,7 @@ class Scene3DRenderer
 {
 	std::unique_ptr<ForegroundOptimizer> foregroundOptimizer;
 	Reconstructor &m_reconstructor;          // Reference to Reconstructor
-	const std::vector<Camera*> &m_cameras;  // Reference to camera's vector
+	std::vector<Camera> &m_cameras;  // Reference to camera's vector
 	const int m_num;                        // Floor grid scale
 	const float m_sphere_radius;            // ArcBall sphere radius
 
@@ -87,7 +87,7 @@ class Scene3DRenderer
 
 public:
 	Scene3DRenderer(
-			Reconstructor &, const std::vector<Camera*> &);
+			Reconstructor &, std::vector<Camera> &);
 
 	virtual ~Scene3DRenderer();
 
@@ -95,14 +95,19 @@ public:
 	void updateTrackbars();
 
 	void processForeground(
-			Camera*);
+			Camera&);
 
 	bool processFrame();
 	void setCamera(
 			int);
 	void setTopView();
 
-	const std::vector<Camera*>& getCameras() const
+	std::vector<Camera>& getCameras()
+	{
+		return m_cameras;
+	}
+
+	const std::vector<Camera>& getCameras() const
 	{
 		return m_cameras;
 	}

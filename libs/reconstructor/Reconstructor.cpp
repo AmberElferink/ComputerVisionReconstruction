@@ -22,17 +22,17 @@ namespace nl_uu_science_gmt
  * Voxel reconstruction class
  */
 Reconstructor::Reconstructor(
-		const std::vector<Camera*> &cs) :
+		const std::vector<Camera> &cs) :
 				m_cameras(cs),
 				m_height(2048),
 				m_step(32)
 {
-	for (auto m_camera : m_cameras)
+	for (auto c : m_cameras)
 	{
 		if (m_plane_size.area() > 0)
-			assert(m_plane_size.width == m_camera->getSize().width && m_plane_size.height == m_camera->getSize().height);
+			assert(m_plane_size.width == c.getSize().width && m_plane_size.height == c.getSize().height);
 		else
-			m_plane_size = m_camera->getSize();
+			m_plane_size = c.getSize();
 	}
 
 	const size_t edge = 2 * m_height;
@@ -117,7 +117,7 @@ void Reconstructor::initialize()
 
 				for (size_t c = 0; c < m_cameras.size(); ++c)
 				{
-					Point point = m_cameras[c]->projectOnView(Point3f((float) x, (float) y, (float) z));
+					Point point = m_cameras[c].projectOnView(Point3f((float) x, (float) y, (float) z));
 
 					// Save the pixel coordinates 'point' of the voxel projection on camera 'c'
 					voxel->camera_projection[(int) c] = point;
@@ -157,7 +157,7 @@ void Reconstructor::update()
 				const Point point = voxel->camera_projection[c];
 
 				//If there's a white pixel on the foreground image at the projection point, add the camera
-				if (m_cameras[c]->getForegroundImage().at<uchar>(point) == 255)
+				if (m_cameras[c].getForegroundImage().at<uchar>(point) == 255)
 				{
 					++camera_counter;
 				}

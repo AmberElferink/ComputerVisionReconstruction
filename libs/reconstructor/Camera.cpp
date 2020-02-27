@@ -514,8 +514,7 @@ cv::Point Camera::projectOnView(
 /**
  * Non-static for backwards compatibility
  */
-Point Camera::projectOnView(
-		const Point3f &coords)
+Point Camera::projectOnView(const Point3f &coords) const
 {
 	return projectOnView(coords, m_rotation_values, m_translation_values, m_camera_matrix, m_distortion_coeffs);
 }
