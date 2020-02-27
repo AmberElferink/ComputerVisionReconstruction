@@ -53,7 +53,7 @@ Scene3DRenderer::Scene3DRenderer(
 
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
-	fs.open(m_cameras.front()->getDataPath() + ".." + string(PATH_SEP) + General::CBConfigFile, FileStorage::READ);
+	fs.open(m_cameras.front()->getDataPath() / ".." / General::CBConfigFile, FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["CheckerBoardWidth"] >> m_board_size.width;
@@ -92,11 +92,11 @@ Scene3DRenderer::Scene3DRenderer(
 
 void Scene3DRenderer::updateTrackbars()
 {
-	createTrackbar("max noise", VIDEO_WINDOW, &m_thresholdMaxNoise, 255);
-	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
-	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
-	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
-	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
+	createTrackbar("max noise", VIDEO_WINDOW.data(), &m_thresholdMaxNoise, 255);
+	createTrackbar("Frame", VIDEO_WINDOW.data(), &m_current_frame, m_number_of_frames - 2);
+	createTrackbar("H", VIDEO_WINDOW.data(), &m_h_threshold, 255);
+	createTrackbar("S", VIDEO_WINDOW.data(), &m_s_threshold, 255);
+	createTrackbar("V", VIDEO_WINDOW.data(), &m_v_threshold, 255);
 }
 
 void Scene3DRenderer::calibThresholds()

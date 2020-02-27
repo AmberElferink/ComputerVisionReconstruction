@@ -60,18 +60,18 @@ bool Camera::initialize()
 	m_initialized = true;
 
 	Mat bg_image;
-	if (General::fexists(m_data_path + General::BackgroundImageFile))
+	if (std::filesystem::exists(m_data_path / General::BackgroundImageFile))
 	{
-		bg_image = imread(m_data_path + General::BackgroundImageFile);
+		bg_image = imread(m_data_path / General::BackgroundImageFile);
 		if (bg_image.empty())
 		{
-			cout << "Unable to read: " << m_data_path + General::BackgroundImageFile;
+			cout << "Unable to read: " << m_data_path / General::BackgroundImageFile;
 			return false;
 		}
 	}
 	else
 	{
-		cout << "Unable to find background image: " << m_data_path + General::BackgroundImageFile;
+		cout << "Unable to find background image: " << m_data_path / General::BackgroundImageFile;
 		return false;
 	}
 	assert(!bg_image.empty());
@@ -82,7 +82,7 @@ bool Camera::initialize()
 	split(bg_hsv_im, m_bg_hsv_channels);
 
 	// Open the video for this camera
-	m_video = VideoCapture(m_data_path + General::VideoFile);
+	m_video = VideoCapture(m_data_path / General::VideoFile);
 	assert(m_video.isOpened());
 
 	// Assess the image size
@@ -97,11 +97,11 @@ bool Camera::initialize()
 	m_video.set(cv::CAP_PROP_POS_AVI_RATIO, 0);  // Go back to the start
 
 	m_video.release(); //Re-open the file because _video.set(CV_CAP_PROP_POS_AVI_RATIO, 1) may screw it up
-	m_video = cv::VideoCapture(m_data_path + General::VideoFile);
+	m_video = cv::VideoCapture(m_data_path / General::VideoFile);
 
 	// Read the camera properties (XML)
 	FileStorage fs;
-	fs.open(m_data_path + m_cam_props_file, FileStorage::READ);
+	fs.open(m_data_path / m_cam_props_file, FileStorage::READ);
 	if (fs.isOpened())
 	{
 		Mat cam_mat, dis_coe, rot_val, tra_val;
@@ -205,14 +205,14 @@ void Camera::onMouse(
  * - Allows for hand pointing the checkerboard corners
  */
 bool Camera::detExtrinsics(
-		const string &data_path, const string &checker_vid_fname, const string &intr_filename, const string &out_fname)
+		const std::filesystem::path &data_path, const string &checker_vid_fname, const string &intr_filename, const string &out_fname)
 {
 	int cb_width = 0, cb_height = 0;
 	int cb_square_size = 0;
 
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
-	fs.open(data_path + ".." + string(PATH_SEP) + General::CBConfigFile, FileStorage::READ);
+	fs.open(data_path / ".." / General::CBConfigFile, FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["CheckerBoardWidth"] >> cb_width;
@@ -225,7 +225,7 @@ bool Camera::detExtrinsics(
 	const int side_len = cb_square_size;  // Actual size of the checkerboard square in millimeters
 
 	Mat camera_matrix, distortion_coeffs;
-	fs.open(data_path + intr_filename, FileStorage::READ);
+	fs.open(data_path / intr_filename, FileStorage::READ);
 	if (fs.isOpened())
 	{
 		Mat camera_matrix_f, distortion_coeffs_f;
@@ -242,18 +242,11 @@ bool Camera::detExtrinsics(
 		return false;
 	}
 
-	VideoCapture cap(data_path + checker_vid_fname);
+	VideoCapture cap(data_path / checker_vid_fname);
 	if (!cap.isOpened())
 	{
-		cerr << "Unable to open: " << data_path + checker_vid_fname << endl;
-		if (General::fexists(data_path + out_fname))
-		{
-			return true;
-		}
-		else
-		{
-			return false;
-		}
+		cerr << "Unable to open: " << data_path / checker_vid_fname << endl;
+		return std::filesystem::exists(data_path/out_fname);
 	}
 
 	// read first frame
@@ -264,8 +257,8 @@ bool Camera::detExtrinsics(
 
 	m_BoardCorners = new vector<Point>(); //A pointer because we need access to it from static function onMouse
 
-	string corners_file = data_path + General::CheckerboadCorners;
-	if (General::fexists(corners_file))
+	std::filesystem::path corners_file = data_path / General::CheckerboadCorners;
+	if (std::filesystem::exists(corners_file))
 	{
 		FileStorage fs;
 		fs.open(corners_file, FileStorage::READ);
@@ -385,7 +378,7 @@ bool Camera::detExtrinsics(
 	line(canvas, o, z, Color_RED, 2, CV_AA);
 	circle(canvas, o, 3, Color_YELLOW, -1, CV_AA);
 
-	fs.open(data_path + out_fname, FileStorage::WRITE);
+	fs.open(data_path / out_fname, FileStorage::WRITE);
 	if (fs.isOpened())
 	{
 		fs << "CameraMatrix" << camera_matrix;

@@ -64,7 +64,6 @@ set(SOURCE_FILES
 	src/controllers/ForegroundOptimizer.cpp
 	src/controllers/ForegroundOptimizer.h
 	src/main.cpp
-	src/utilities/General.cpp
 	src/VoxelReconstruction.cpp)
 
 #############################################

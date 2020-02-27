@@ -1277,15 +1277,15 @@ void Renderer::update()
 		Mat fg_im_3c;
 		cvtColor(foreground, fg_im_3c, CV_GRAY2BGR);
 		hconcat(canvas, fg_im_3c, canvas);
-		imshow(VIDEO_WINDOW, canvas);
+		imshow(VIDEO_WINDOW.data(), canvas);
 	}
 	else if (!canvas.empty())
 	{
-		imshow(VIDEO_WINDOW, canvas);
+		imshow(VIDEO_WINDOW.data(), canvas);
 	}
 
 	// Update the frame slider position
-	setTrackbarPos("Frame", VIDEO_WINDOW, scene3d.getCurrentFrame());
+	setTrackbarPos("Frame", VIDEO_WINDOW.data(), scene3d.getCurrentFrame());
 
 	auto& scalarField = scene3d.getReconstructor().getScalarField();
 	m_scalarField->upload(scalarField.data(), scalarField.size() * sizeof(scalarField[0]));

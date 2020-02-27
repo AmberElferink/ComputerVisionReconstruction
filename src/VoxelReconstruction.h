@@ -8,7 +8,7 @@
 #ifndef VOXELRECONSTRUCTION_H_
 #define VOXELRECONSTRUCTION_H_
 
-#include <string>
+#include <filesystem>
 #include <vector>
 
 #include "controllers/Camera.h"
@@ -18,13 +18,13 @@ namespace nl_uu_science_gmt
 
 class VoxelReconstruction
 {
-	const std::string m_data_path;
+	const std::filesystem::path m_data_path;
 	const int m_cam_views_amount;
 
 	std::vector<Camera*> m_cam_views;
 
 public:
-	VoxelReconstruction(const std::string &, const int);
+	VoxelReconstruction(std::filesystem::path , int);
 	virtual ~VoxelReconstruction();
 
 	static void showKeys();

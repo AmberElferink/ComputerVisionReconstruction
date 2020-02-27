@@ -11,6 +11,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -26,8 +27,8 @@ class Camera
 
 	bool m_initialized;                             // Is this camera successfully initialized
 
-	const std::string m_data_path;                  // Path to data directory
-	const std::string m_cam_props_file;             // Camera properties filename
+	const std::filesystem::path m_data_path;        // Path to data directory
+	const std::filesystem::path m_cam_props_file;   // Camera properties filename
 	const int m_id;                                 // Camera ID
 
 	std::vector<cv::Mat> m_bg_hsv_channels;          // Background HSV channel images
@@ -71,17 +72,17 @@ public:
 	cv::Mat& getVideoFrame(int);
 	void setVideoFrame(int);
 
-	static bool detExtrinsics(const std::string &, const std::string &, const std::string &, const std::string &);
+	static bool detExtrinsics(const std::filesystem::path &, const std::string &, const std::string &, const std::string &);
 
 	static cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &);
 	cv::Point projectOnView(const cv::Point3f &);
 
-	const std::string& getCamPropertiesFile() const
+	const std::filesystem::path& getCamPropertiesFile() const
 	{
 		return m_cam_props_file;
 	}
 
-	const std::string& getDataPath() const
+	const std::filesystem::path& getDataPath() const
 	{
 		return m_data_path;
 	}
