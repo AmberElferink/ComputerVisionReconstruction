@@ -101,8 +101,7 @@ void VoxelReconstruction::run(int argc, char** argv)
 {
 	for (int v = 0; v < m_cam_views_amount; ++v)
 	{
-		bool has_cam = Camera::detExtrinsics(m_cam_views[v].getDataPath(), General::CBConfigFile, General::CheckerboadCorners, General::CheckerboadVideo.data(),
-											 General::IntrinsicsFile.data(), m_cam_views[v].getCamPropertiesFile());
+		bool has_cam = m_cam_views[v].detExtrinsics(General::CBConfigFile, General::CheckerboadCorners, General::CheckerboadVideo.data(), General::IntrinsicsFile.data());
 		if (has_cam) {
 			has_cam = m_cam_views[v].initialize(General::BackgroundImageFile, General::VideoFile);
 		} else {

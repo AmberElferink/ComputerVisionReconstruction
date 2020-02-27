@@ -78,6 +78,7 @@ foreach(CAMERA cam1 cam2 cam3 cam4)
 	list(APPEND FILES_TO_COPY data/${CAMERA}/video.avi)
 	list(APPEND FILES_TO_COPY data/${CAMERA}/checkerboard.avi)
 	list(APPEND VIDEOS data/${CAMERA}/video.avi)
+	list(APPEND CHECKERBOARDS data/${CAMERA}/checkerboard.avi)
 	list(APPEND BACKGROUNDS data/${CAMERA}/background.avi)
 	list(APPEND INTRINSICS data/${CAMERA}/intrinsics.avi)
 endforeach()
@@ -135,6 +136,31 @@ foreach(asset ${INTRINSICS})
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
 		COMMAND camera_calibrator ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output} ${CALIBRATION_FRAME_STEP}
 		DEPENDS ${asset} data/checkerboard.xml
+	)
+	list(APPEND SOURCE_FILES ${asset_output})
+endforeach()
+
+# Tell cmake to generate boardcorners.xml by first averaging checkerboard.avi files
+foreach(asset ${CHECKERBOARDS})
+	get_filename_component(asset_directory ${asset} DIRECTORY)
+	get_filename_component(asset_name_we ${asset} NAME_WE)
+	set(checkerboard_image ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name_we}.png)
+
+	# Average the checkboard video to image
+	add_custom_command(
+		OUTPUT ${checkerboard_image}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND background_averager ${asset} ${checkerboard_image}
+		DEPENDS ${asset}
+	)
+
+	# Have user calibrate by hand
+	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/boardcorners.xml)
+	add_custom_command(
+		OUTPUT ${asset_output}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND hand_calibration ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${checkerboard_image} ${asset_output}
+		DEPENDS ${asset}
 	)
 	list(APPEND SOURCE_FILES ${asset_output})
 endforeach()

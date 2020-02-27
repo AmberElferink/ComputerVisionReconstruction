@@ -18,13 +18,8 @@
 namespace nl_uu_science_gmt
 {
 
-#define MAIN_WINDOW "Checkerboard Marking"
-
 class Camera
 {
-	static std::vector<cv::Point>* m_BoardCorners;  // marked checkerboard corners
-	static cv::Point m_MousePosition;               // position of mouse for helping select corners
-
 	bool m_initialized;                             // Is this camera successfully initialized
 
 	const std::filesystem::path m_data_path;        // Path to data directory
@@ -55,7 +50,9 @@ class Camera
 
 	cv::Mat m_frame;                                 // Current video frame (image)
 
-	static void onMouse(int, int, int, int, void*);
+	std::vector<cv::Point> m_BoardCorners;           // marked checkerboard corners
+	cv::Point m_MousePosition;                       // position of mouse for helping select corners
+
 	void initCamLoc();
 	inline void camPtInWorld();
 
@@ -72,14 +69,12 @@ public:
 	cv::Mat& getVideoFrame(int);
 	void setVideoFrame(int);
 
-	static bool detExtrinsics(const std::filesystem::path &data_path,
-							  const std::filesystem::path &config_file_path,
-							  const std::filesystem::path &corners_file_path,
-							  const std::string &checker_vid_fname,
-							  const std::string &intr_filename,
-							  const std::string &out_fname);
+	bool detExtrinsics(const std::filesystem::path &config_file_path,
+	                   const std::filesystem::path &corners_file_path,
+	                   const std::string &checker_vid_fname,
+	                   const std::string &intr_filename);
 
-	static cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &);
+	cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &) const;
 	cv::Point projectOnView(const cv::Point3f &) const;
 
 	const std::filesystem::path& getCamPropertiesFile() const
