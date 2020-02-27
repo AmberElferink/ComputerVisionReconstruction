@@ -79,9 +79,11 @@ list(APPEND FILES_TO_COPY data/checkerboard.xml)
 foreach(CAMERA cam1 cam2 cam3 cam4)
 	list(APPEND FILES_TO_COPY data/${CAMERA}/video.avi)
 	list(APPEND FILES_TO_COPY data/${CAMERA}/checkerboard.avi)
+	list(APPEND VIDEOS data/${CAMERA}/video.avi)
 	list(APPEND BACKGROUNDS data/${CAMERA}/background.avi)
 	list(APPEND INTRINSICS data/${CAMERA}/intrinsics.avi)
 endforeach()
+set(COLOR_CALIBRATION_FRAME_NUMBER 1180)
 
 # Tell cmake to copy video files in order to include them
 foreach(asset ${FILES_TO_COPY})
@@ -106,6 +108,20 @@ foreach(asset ${BACKGROUNDS})
 		OUTPUT ${asset_output}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
 		COMMAND background_averager ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output}
+		DEPENDS ${asset}
+	)
+	list(APPEND SOURCE_FILES ${asset_output})
+endforeach()
+
+# Tell cmake to generate color_calibration.png files
+foreach(asset ${VIDEOS})
+	get_filename_component(asset_name_we ${asset} NAME_WE)
+	get_filename_component(asset_directory ${asset} DIRECTORY)
+	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/color_calibration.png)
+	add_custom_command(
+		OUTPUT ${asset_output}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND image_extractor ${CMAKE_CURRENT_SOURCE_DIR}/${asset} ${asset_output} ${COLOR_CALIBRATION_FRAME_NUMBER}
 		DEPENDS ${asset}
 	)
 	list(APPEND SOURCE_FILES ${asset_output})
