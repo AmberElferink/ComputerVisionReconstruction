@@ -19,8 +19,6 @@ namespace nl_uu_science_gmt
 class VoxelReconstruction
 {
 	const std::filesystem::path m_data_path;
-	const int m_cam_views_amount;
-
 	std::vector<Camera> m_cam_views;
 
 public:

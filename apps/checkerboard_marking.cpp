@@ -72,20 +72,18 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    int cb_width = 0, cb_height = 0;
-    int cb_square_size = 0;
+    cv::Size board_size;
+    int side_len = 0;
     // Read the checkerboard properties (XML)
     cv::FileStorage fs;
     fs.open(metadata, cv::FileStorage::READ);
     if (fs.isOpened())
     {
-        fs["CheckerBoardWidth"] >> cb_width;
-        fs["CheckerBoardHeight"] >> cb_height;
-        fs["CheckerBoardSquareSize"] >> cb_square_size;
+        fs["CheckerBoardWidth"] >> board_size.width;
+        fs["CheckerBoardHeight"] >> board_size.height;
+        fs["CheckerBoardSquareSize"] >> side_len;
     }
     fs.release();
-
-    const cv::Size board_size(cb_width, cb_height);
 
 
     std::cout << "Estimate camera extrinsics by hand..." << std::endl;

@@ -69,12 +69,7 @@ public:
 	cv::Mat& getVideoFrame(int);
 	void setVideoFrame(int);
 
-	bool detExtrinsics(const std::filesystem::path &config_file_path,
-	                   const std::filesystem::path &corners_file_path,
-	                   const std::string &checker_vid_fname,
-	                   const std::string &intr_filename);
-
-	cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &) const;
+	static cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &);
 	cv::Point projectOnView(const cv::Point3f &) const;
 
 	const std::filesystem::path& getCamPropertiesFile() const

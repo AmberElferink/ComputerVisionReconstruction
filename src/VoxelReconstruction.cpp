@@ -29,12 +29,10 @@ namespace nl_uu_science_gmt
 /**
  * Main constructor, initialized all cameras
  */
-VoxelReconstruction::VoxelReconstruction(std::filesystem::path dp, int cva) :
-		m_data_path(std::move(dp)), m_cam_views_amount(cva)
+VoxelReconstruction::VoxelReconstruction(std::filesystem::path dp, int cam_views_amount) :
+		m_data_path(std::move(dp))
 {
-	const std::filesystem::path cam_path = m_data_path / "cam";
-
-	for (int v = 0; v < m_cam_views_amount; ++v)
+	for (int v = 0; v < cam_views_amount; ++v)
 	{
 		auto full_path = m_data_path / ("cam" + std::to_string(v + 1));
 
@@ -54,12 +52,7 @@ VoxelReconstruction::VoxelReconstruction(std::filesystem::path dp, int cva) :
 		 * Assert that if there's no config.xml file, there's an intrinsics file and
 		 * a checkerboard video to create the extrinsics from
 		 */
-		assert(
-			(!std::filesystem::exists(full_path / General::ConfigFile) ?
-				std::filesystem::exists(full_path / General::IntrinsicsFile) &&
-					std::filesystem::exists(full_path / General::CheckerboadVideo)
-			 : true)
-		);
+		assert(std::filesystem::exists(full_path / General::ConfigFile));
 
 		m_cam_views.emplace_back(full_path, General::ConfigFile.data(), v);
 	}
@@ -99,15 +92,9 @@ void VoxelReconstruction::showKeys()
  */
 void VoxelReconstruction::run(int argc, char** argv)
 {
-	for (int v = 0; v < m_cam_views_amount; ++v)
+	for (auto& v : m_cam_views)
 	{
-		bool has_cam = m_cam_views[v].detExtrinsics(General::CBConfigFile, General::CheckerboadCorners, General::CheckerboadVideo.data(), General::IntrinsicsFile.data());
-		if (has_cam) {
-			has_cam = m_cam_views[v].initialize(General::BackgroundImageFile, General::VideoFile);
-		} else {
-			assert(false);
-		}
-		assert(has_cam);
+		assert(v.initialize(General::BackgroundImageFile, General::VideoFile));
 	}
 
 	destroyAllWindows();

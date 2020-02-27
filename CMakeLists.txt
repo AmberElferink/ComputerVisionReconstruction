@@ -144,9 +144,9 @@ endforeach()
 foreach(asset ${CHECKERBOARDS})
 	get_filename_component(asset_directory ${asset} DIRECTORY)
 	get_filename_component(asset_name_we ${asset} NAME_WE)
-	set(checkerboard_image ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name_we}.png)
 
 	# Average the checkboard video to image
+	set(checkerboard_image ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name_we}.png)
 	add_custom_command(
 		OUTPUT ${checkerboard_image}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
@@ -155,12 +155,20 @@ foreach(asset ${CHECKERBOARDS})
 	)
 
 	# Have user calibrate by hand
-	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/boardcorners.xml)
+	set(corners ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/boardcorners.xml)
+	add_custom_command(
+		OUTPUT ${corners}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND hand_calibration ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${checkerboard_image} ${corners}
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${checkerboard_image}
+	)
+
+	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/config.xml)
 	add_custom_command(
 		OUTPUT ${asset_output}
 		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
-		COMMAND hand_calibration ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${checkerboard_image} ${asset_output}
-		DEPENDS ${asset}
+		COMMAND extrinsics_configurator ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/intrinsics.xml ${checkerboard_image} ${corners} ${asset_output}
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/intrinsics.xml ${checkerboard_image} ${corners}
 	)
 	list(APPEND SOURCE_FILES ${asset_output})
 endforeach()
