@@ -66,12 +66,12 @@ class Scene3DRenderer
 	int m_current_camera;                     // number of currently selected camera view point
 	int m_previous_camera;                    // number of previously selected camera view point
 
-	int m_h_threshold;                        // Hue threshold number for background subtraction
-	int m_ph_threshold;                       // Hue threshold value at previous iteration (update awareness)
-	int m_s_threshold;                        // Saturation threshold number for background subtraction
-	int m_ps_threshold;                       // Saturation threshold value at previous iteration (update awareness)
-	int m_v_threshold;                        // Value threshold number for background subtraction
-	int m_pv_threshold;                       // Value threshold value at previous iteration (update awareness)
+	uint8_t m_h_threshold;                    // Hue threshold number for background subtraction
+	uint8_t m_ph_threshold;                   // Hue threshold value at previous iteration (update awareness)
+	uint8_t m_s_threshold;                    // Saturation threshold number for background subtraction
+	uint8_t m_ps_threshold;                   // Saturation threshold value at previous iteration (update awareness)
+	uint8_t m_v_threshold;                    // Value threshold number for background subtraction
+	uint8_t m_pv_threshold;                   // Value threshold value at previous iteration (update awareness)
 	int m_s_thresholdMaxContourIncrease;		  // max increases in seperate blobs detected betweewn threshold operations until termination for S
 	int m_thresholdMaxNoise;		  // max increases in seperate blobs detected betweewn threshold operations until termination for V
 

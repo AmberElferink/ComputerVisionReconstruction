@@ -60,8 +60,6 @@ set(SOURCE_FILES
 	src/controllers/ArcBall.cpp
 	src/controllers/Renderer.cpp
 	src/controllers/Scene3DRenderer.cpp
-	src/controllers/ForegroundOptimizer.cpp
-	src/controllers/ForegroundOptimizer.h
 	src/main.cpp
 	src/VoxelReconstruction.cpp)
 

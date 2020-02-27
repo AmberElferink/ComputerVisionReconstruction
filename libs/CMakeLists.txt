@@ -1,6 +1,8 @@
 add_library(reconstructor STATIC
   reconstructor/Camera.h
   reconstructor/Camera.cpp
+  reconstructor/ForegroundOptimizer.h
+  reconstructor/ForegroundOptimizer.cpp
   reconstructor/Reconstructor.h
   reconstructor/Reconstructor.cpp
 )

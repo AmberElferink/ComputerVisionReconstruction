@@ -720,7 +720,7 @@ void Renderer::initializeGeometry()
 
 	// Volume
 	{
-		vector<Point3f*> corners = m_scene3d.getReconstructor().getCorners();
+		const vector<Point3f>& corners = m_scene3d.getReconstructor().getCorners();
 
 		Buffer::CreateInfo buffer_info;
 		// Vertex Buffer
@@ -774,7 +774,7 @@ void Renderer::initializeGeometry()
 		auto vertexBase = reinterpret_cast<glm::vec3*>(vertexMem.get());
 		for (size_t i = 0; i < corners.size(); ++i)
 		{
-			vertexBase[i] = glm::vec3(corners[i]->x, corners[i]->y, corners[i]->z);
+			vertexBase[i] = glm::vec3(corners[i].x, corners[i].y, corners[i].z);
 		}
 	}
 

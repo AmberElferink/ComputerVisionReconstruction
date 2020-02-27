@@ -51,13 +51,13 @@ bool Camera::initialize(const std::filesystem::path &background_image_file, cons
 		bg_image = imread(m_data_path / background_image_file);
 		if (bg_image.empty())
 		{
-			std::cout << "Unable to read: " << m_data_path / background_image_file;
+			std::cout << "Unable to read: " << m_data_path / background_image_file << std::endl;
 			return false;
 		}
 	}
 	else
 	{
-		std::cout << "Unable to find background image: " << m_data_path / background_image_file;
+		std::cout << "Unable to find background image: " << m_data_path / background_image_file << std::endl;
 		return false;
 	}
 	assert(!bg_image.empty());

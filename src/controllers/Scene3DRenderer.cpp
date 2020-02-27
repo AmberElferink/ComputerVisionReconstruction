@@ -94,9 +94,18 @@ void Scene3DRenderer::updateTrackbars()
 {
 	createTrackbar("max noise", VIDEO_WINDOW.data(), &m_thresholdMaxNoise, 255);
 	createTrackbar("Frame", VIDEO_WINDOW.data(), &m_current_frame, m_number_of_frames - 2);
-	createTrackbar("H", VIDEO_WINDOW.data(), &m_h_threshold, 255);
-	createTrackbar("S", VIDEO_WINDOW.data(), &m_s_threshold, 255);
-	createTrackbar("V", VIDEO_WINDOW.data(), &m_v_threshold, 255);
+
+	int h_threshold = m_h_threshold;
+	int s_threshold = m_s_threshold;
+	int v_threshold = m_v_threshold;
+
+	createTrackbar("H", VIDEO_WINDOW.data(), &h_threshold, 255);
+	createTrackbar("S", VIDEO_WINDOW.data(), &s_threshold, 255);
+	createTrackbar("V", VIDEO_WINDOW.data(), &v_threshold, 255);
+
+	h_threshold = static_cast<uint8_t>(m_h_threshold);
+	s_threshold = static_cast<uint8_t>(m_s_threshold);
+	v_threshold = static_cast<uint8_t>(m_v_threshold);
 }
 
 void Scene3DRenderer::calibThresholds()
@@ -160,8 +169,6 @@ bool Scene3DRenderer::processFrame()
 	return true;
 }
 
-
-
 /**
  * Separate the background from the foreground
  * ie.: Create an 8 bit image where only the foreground of the scene is white (255)
@@ -188,13 +195,10 @@ void Scene3DRenderer::processForeground(Camera& camera)
 	foregroundOptimizer->FindContours(foreground);
 	foregroundOptimizer->SaveMaxContours();
 	foregroundOptimizer->DrawMaxContours(foreground, true, 255);
-	
 
 	// Improve the foreground image
 	camera.setForegroundImage(foreground);
 }
-
-
 
 /**
  * Set currently visible camera to the given camera id
