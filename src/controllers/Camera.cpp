@@ -9,34 +9,26 @@
 
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/core/core.hpp>
-#include <opencv2/core/core_c.h>
 #include <opencv2/core/mat.hpp>
-#include <opencv2/core/operations.hpp>
-#include <opencv2/core/types_c.h>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/highgui/highgui_c.h>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/imgproc/types_c.h>
-#include <stddef.h>
+#include <cstddef>
 #include <cassert>
 #include <iostream>
-#include <sstream>
+#include <utility>
 
-#include "../utilities/General.h"
-
-using namespace std;
 using namespace cv;
 
 namespace nl_uu_science_gmt
 {
 
-vector<Point>* Camera::m_BoardCorners;  // marked checkerboard corners
+std::vector<Point>* Camera::m_BoardCorners;  // marked checkerboard corners
 Point Camera::m_MousePosition;          // current mouse position
 
 Camera::Camera(
-		const string &dp, const string &cp, const int id) :
-				m_data_path(dp),
-				m_cam_props_file(cp),
+		std::filesystem::path dp, std::filesystem::path cp, const int id) :
+				m_data_path(std::move(dp)),
+				m_cam_props_file(std::move(cp)),
 				m_id(id)
 {
 	m_initialized = false;
@@ -48,41 +40,39 @@ Camera::Camera(
 	m_frame_amount = 0;
 }
 
-Camera::~Camera()
-{
-}
+Camera::~Camera() = default;
 
 /**
  * Initialize this camera
  */
-bool Camera::initialize()
+bool Camera::initialize(const std::filesystem::path &background_image_file, const std::filesystem::path &video_file)
 {
 	m_initialized = true;
 
 	Mat bg_image;
-	if (std::filesystem::exists(m_data_path / General::BackgroundImageFile))
+	if (std::filesystem::exists(m_data_path / background_image_file))
 	{
-		bg_image = imread(m_data_path / General::BackgroundImageFile);
+		bg_image = imread(m_data_path / background_image_file);
 		if (bg_image.empty())
 		{
-			cout << "Unable to read: " << m_data_path / General::BackgroundImageFile;
+			std::cout << "Unable to read: " << m_data_path / background_image_file;
 			return false;
 		}
 	}
 	else
 	{
-		cout << "Unable to find background image: " << m_data_path / General::BackgroundImageFile;
+		std::cout << "Unable to find background image: " << m_data_path / background_image_file;
 		return false;
 	}
 	assert(!bg_image.empty());
 
 	// Disect the background image in HSV-color space
 	Mat bg_hsv_im;
-	cvtColor(bg_image, bg_hsv_im, CV_BGR2HSV);
+	cvtColor(bg_image, bg_hsv_im, cv::COLOR_BGR2HSV);
 	split(bg_hsv_im, m_bg_hsv_channels);
 
 	// Open the video for this camera
-	m_video = VideoCapture(m_data_path / General::VideoFile);
+	m_video = VideoCapture(m_data_path / video_file);
 	assert(m_video.isOpened());
 
 	// Assess the image size
@@ -97,7 +87,7 @@ bool Camera::initialize()
 	m_video.set(cv::CAP_PROP_POS_AVI_RATIO, 0);  // Go back to the start
 
 	m_video.release(); //Re-open the file because _video.set(CV_CAP_PROP_POS_AVI_RATIO, 1) may screw it up
-	m_video = cv::VideoCapture(m_data_path / General::VideoFile);
+	m_video = cv::VideoCapture(m_data_path / video_file);
 
 	// Read the camera properties (XML)
 	FileStorage fs;
@@ -129,7 +119,7 @@ bool Camera::initialize()
 	}
 	else
 	{
-		cerr << "Unable to locate: " << m_data_path << m_cam_props_file << endl;
+		std::cerr << "Unable to locate: " << m_data_path << m_cam_props_file << std::endl;
 		m_initialized = false;
 	}
 
@@ -181,14 +171,14 @@ void Camera::onMouse(
 		{
 			if (!m_BoardCorners->empty())
 			{
-				cout << "Removed corner " << m_BoardCorners->size() << "... (use Click to add)" << endl;
+				std::cout << "Removed corner " << m_BoardCorners->size() << "... (use Click to add)" << std::endl;
 				m_BoardCorners->pop_back();
 			}
 		}
 		else
 		{
 			m_BoardCorners->push_back(Point(x, y));
-			cout << "Added corner " << m_BoardCorners->size() << "... (use CTRL+Click to remove)" << endl;
+			std::cout << "Added corner " << m_BoardCorners->size() << "... (use CTRL+Click to remove)" << std::endl;
 		}
 		break;
 	case EVENT_MOUSEMOVE:
@@ -204,15 +194,19 @@ void Camera::onMouse(
  * - Determine the camera's extrinsics based on a checkerboard image and the camera intrinsics
  * - Allows for hand pointing the checkerboard corners
  */
-bool Camera::detExtrinsics(
-		const std::filesystem::path &data_path, const string &checker_vid_fname, const string &intr_filename, const string &out_fname)
+bool Camera::detExtrinsics(const std::filesystem::path &data_path,
+                           const std::filesystem::path &config_file_path,
+                           const std::filesystem::path &corners_file_path,
+                           const std::string &checker_vid_fname,
+                           const std::string &intr_filename,
+                           const std::string &out_fname)
 {
 	int cb_width = 0, cb_height = 0;
 	int cb_square_size = 0;
 
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
-	fs.open(data_path / ".." / General::CBConfigFile, FileStorage::READ);
+	fs.open(data_path / ".." / config_file_path, FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["CheckerBoardWidth"] >> cb_width;
@@ -238,14 +232,14 @@ bool Camera::detExtrinsics(
 	}
 	else
 	{
-		cerr << "Unable to read camera intrinsics from: " << data_path << intr_filename << endl;
+		std::cerr << "Unable to read camera intrinsics from: " << data_path << intr_filename << std::endl;
 		return false;
 	}
 
 	VideoCapture cap(data_path / checker_vid_fname);
 	if (!cap.isOpened())
 	{
-		cerr << "Unable to open: " << data_path / checker_vid_fname << endl;
+		std::cerr << "Unable to open: " << data_path / checker_vid_fname << std::endl;
 		return std::filesystem::exists(data_path/out_fname);
 	}
 
@@ -255,12 +249,11 @@ bool Camera::detExtrinsics(
 		cap >> frame;
 	assert(!frame.empty());
 
-	m_BoardCorners = new vector<Point>(); //A pointer because we need access to it from static function onMouse
+	m_BoardCorners = new std::vector<Point>(); //A pointer because we need access to it from static function onMouse
 
-	std::filesystem::path corners_file = data_path / General::CheckerboadCorners;
+	std::filesystem::path corners_file = data_path / corners_file_path;
 	if (std::filesystem::exists(corners_file))
 	{
-		FileStorage fs;
 		fs.open(corners_file, FileStorage::READ);
 		if (fs.isOpened())
 		{
@@ -269,11 +262,10 @@ bool Camera::detExtrinsics(
 
 			for (int b = 0; b < corners_amount; ++b)
 			{
-				stringstream corner_id;
-				corner_id << "Corner_" << b;
+				std::string corner_id = "Corner_" + std::to_string(b);
 
-				vector<int> corner;
-				fs[corner_id.str()] >> corner;
+				std::vector<int> corner;
+				fs[corner_id] >> corner;
 				assert(corner.size() == 2);
 				m_BoardCorners->push_back(Point(corner[0], corner[1]));
 			}
@@ -285,11 +277,11 @@ bool Camera::detExtrinsics(
 	}
 	else
 	{
-		cout << "Estimate camera extrinsics by hand..." << endl;
-		namedWindow(MAIN_WINDOW, CV_WINDOW_KEEPRATIO);
+		std::cout << "Estimate camera extrinsics by hand..." << std::endl;
+		namedWindow(MAIN_WINDOW, cv::WINDOW_KEEPRATIO);
 		setMouseCallback(MAIN_WINDOW, onMouse);
 
-		cout << "Now mark the " << board_size.area() << " interior corners of the checkerboard" << endl;
+		std::cout << "Now mark the " << board_size.area() << " interior corners of the checkerboard" << std::endl;
 		Mat canvas;
 		while ((int) m_BoardCorners->size() < board_size.area())
 		{
@@ -299,12 +291,12 @@ bool Camera::detExtrinsics(
 			{
 				for (size_t c = 0; c < m_BoardCorners->size(); c++)
 				{
-					circle(canvas, m_BoardCorners->at(c), 4, Color_MAGENTA, 1, 8);
+					circle(canvas, m_BoardCorners->at(c), 4, cv::Scalar(255, 0, 255), 1, 8);
 					if (c > 0)
-						line(canvas, m_BoardCorners->at(c), m_BoardCorners->at(c - 1), Color_MAGENTA, 1, 8);
+						line(canvas, m_BoardCorners->at(c), m_BoardCorners->at(c - 1), cv::Scalar(255, 0, 255), 1, 8);
 				}
 				Point2i vector = m_MousePosition - m_BoardCorners->back();
-				line(canvas, m_BoardCorners->back() -  10.0f * vector, m_BoardCorners->back() + 10.0f * vector, Color_GREEN, 1, 8);
+				line(canvas, m_BoardCorners->back() -  10.0f * vector, m_BoardCorners->back() + 10.0f * vector, cv::Scalar(0, 200, 0), 1, 8);
 			}
 
 			int key = waitKey(10);
@@ -321,26 +313,23 @@ bool Camera::detExtrinsics(
 		}
 
 		assert((int ) m_BoardCorners->size() == board_size.area());
-		cout << "Marking finished!" << endl;
+		std::cout << "Marking finished!" << std::endl;
 		destroyAllWindows();
 
-		FileStorage fs;
 		fs.open(corners_file, FileStorage::WRITE);
 		if (fs.isOpened())
 		{
 			fs << "CornersAmount" << (int) m_BoardCorners->size();
 			for (size_t b = 0; b < m_BoardCorners->size(); ++b)
 			{
-				stringstream corner_id;
-				corner_id << "Corner_" << b;
-				fs << corner_id.str() << m_BoardCorners->at(b);
+				fs << ("Corner_" + std::to_string(b)) << m_BoardCorners->at(b);
 			}
 			fs.release();
 		}
 	}
 
-	vector<Point3f> object_points;
-	vector<Point2f> image_points;
+	std::vector<Point3f> object_points;
+    std::vector<Point2f> image_points;
 
 	// save the object points and image points
 	for (int s = 0; s < board_size.area(); ++s)
@@ -349,7 +338,7 @@ bool Camera::detExtrinsics(
 		float y = float(s % board_size.width * side_len);
 		float z = 0;
 
-		object_points.push_back(Point3f(x, y, z));
+		object_points.emplace_back(x, y, z);
 		image_points.push_back(m_BoardCorners->at(s));
 	}
 
@@ -373,10 +362,10 @@ bool Camera::detExtrinsics(
 	Point y = projectOnView(Point3f(0, y_len, 0), rotation_values, translation_values, camera_matrix, distortion_coeffs);
 	Point z = projectOnView(Point3f(0, 0, z_len), rotation_values, translation_values, camera_matrix, distortion_coeffs);
 
-	line(canvas, o, x, Color_BLUE, 2, CV_AA);
-	line(canvas, o, y, Color_GREEN, 2, CV_AA);
-	line(canvas, o, z, Color_RED, 2, CV_AA);
-	circle(canvas, o, 3, Color_YELLOW, -1, CV_AA);
+	line(canvas, o, x, cv::Scalar(255, 0, 0), 2, cv::LINE_AA);
+	line(canvas, o, y, cv::Scalar(0, 255, 0), 2, cv::LINE_AA);
+	line(canvas, o, z, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+	circle(canvas, o, 3, cv::Scalar(0, 255, 255), -1, cv::LINE_AA);
 
 	fs.open(data_path / out_fname, FileStorage::WRITE);
 	if (fs.isOpened())
@@ -389,12 +378,12 @@ bool Camera::detExtrinsics(
 	}
 	else
 	{
-		cerr << "Unable to write camera intrinsics+extrinsics to: " << data_path << out_fname << endl;
+		std::cerr << "Unable to write camera intrinsics+extrinsics to: " << data_path << out_fname << std::endl;
 		return false;
 	}
 
 	// Show the origin on the checkerboard
-	namedWindow("Origin", CV_WINDOW_KEEPRATIO);
+	namedWindow("Origin", cv::WINDOW_KEEPRATIO);
 	imshow("Origin", canvas);
 	waitKey(1000);
 
@@ -437,7 +426,7 @@ void Camera::initCamLoc()
 			camera_mat.at<float>(1, 1) + camera_mat.at<float>(3, 1),
 			camera_mat.at<float>(2, 2) + camera_mat.at<float>(3, 2));
 
-	cout << "Camera " << m_id + 1 << " " << m_camera_location << endl;
+	std::cout << "Camera " << m_id + 1 << " " << m_camera_location << std::endl;
 
 	m_rt = rotation;
 
@@ -513,10 +502,10 @@ cv::Point Camera::projectOnView(
 		const cv::Point3f &coords, const cv::Mat &rotation_values, const cv::Mat &translation_values, const cv::Mat &camera_matrix,
 		const cv::Mat &distortion_coeffs)
 {
-	vector<Point3f> object_points;
+	std::vector<Point3f> object_points;
 	object_points.push_back(coords);
 
-	vector<Point2f> image_points;
+	std::vector<Point2f> image_points;
 	projectPoints(object_points, rotation_values, translation_values, camera_matrix, distortion_coeffs, image_points);
 
 	return image_points.front();

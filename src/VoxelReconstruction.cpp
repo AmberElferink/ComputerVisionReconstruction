@@ -21,6 +21,8 @@
 using namespace nl_uu_science_gmt;
 using namespace cv;
 
+constexpr std::string_view VERSION = "2.5";
+
 namespace nl_uu_science_gmt
 {
 
@@ -106,10 +108,10 @@ void VoxelReconstruction::run(int argc, char** argv)
 {
 	for (int v = 0; v < m_cam_views_amount; ++v)
 	{
-		bool has_cam = Camera::detExtrinsics(m_cam_views[v]->getDataPath(), General::CheckerboadVideo.data(),
-				General::IntrinsicsFile.data(), m_cam_views[v]->getCamPropertiesFile());
+		bool has_cam = Camera::detExtrinsics(m_cam_views[v]->getDataPath(), General::CBConfigFile, General::CheckerboadCorners, General::CheckerboadVideo.data(),
+											 General::IntrinsicsFile.data(), m_cam_views[v]->getCamPropertiesFile());
 		if (has_cam) {
-			has_cam = m_cam_views[v]->initialize();
+			has_cam = m_cam_views[v]->initialize(General::BackgroundImageFile, General::VideoFile);
 		} else {
 			assert(false);
 		}

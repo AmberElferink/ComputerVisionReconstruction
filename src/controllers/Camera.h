@@ -10,7 +10,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/mat.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/videoio/videoio.hpp>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -63,16 +63,21 @@ class Camera
 	cv::Point3f cam3DtoW3D(const cv::Point3f &);
 
 public:
-	Camera(const std::string &, const std::string &, int);
+	Camera(std::filesystem::path , std::filesystem::path , int);
 	virtual ~Camera();
 
-	bool initialize();
+	bool initialize(const std::filesystem::path &background_image_file, const std::filesystem::path &video_file);
 
 	cv::Mat& advanceVideoFrame();
 	cv::Mat& getVideoFrame(int);
 	void setVideoFrame(int);
 
-	static bool detExtrinsics(const std::filesystem::path &, const std::string &, const std::string &, const std::string &);
+	static bool detExtrinsics(const std::filesystem::path &data_path,
+							  const std::filesystem::path &config_file_path,
+							  const std::filesystem::path &corners_file_path,
+							  const std::string &checker_vid_fname,
+							  const std::string &intr_filename,
+							  const std::string &out_fname);
 
 	static cv::Point projectOnView(const cv::Point3f &, const cv::Mat &, const cv::Mat &, const cv::Mat &, const cv::Mat &);
 	cv::Point projectOnView(const cv::Point3f &);
