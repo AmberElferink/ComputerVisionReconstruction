@@ -115,7 +115,7 @@ void ForegroundOptimizer::SaveMaxContours()
 		double areaBlackPositive = contourArea(contours[i], true);
 		if (areaBlackPositive > 20)
 		{
-			blackContours.push_back(i);
+			blackContours.push_back(i); //save black contours to draw them over the white ones if they are large enough to not necessarily be noise.
 		}
 		double area = -areaBlackPositive; // negative means white apparently, and you want white
 		if (area > maxContourAreas[nrContoursTracked - 1]) 

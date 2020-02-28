@@ -11,6 +11,7 @@
 #include <opencv2/core/core.hpp>
 #include <stddef.h>
 #include <vector>
+#include <glm/vec4.hpp>
 
 #include "Camera.h"
 
@@ -45,7 +46,7 @@ private:
 
 	std::vector<Voxel*> m_voxels;           // Pointer vector to all voxels in the half-space
 	std::vector<Voxel*> m_visible_voxels;   // Pointer vector to all visible voxels
-	std::vector<float> m_scalar_field;      // Values for each point in the half-space
+	std::vector<glm::vec4> m_scalar_field;      // Values for each point in the half-space
 
 	void initialize();
 
@@ -86,7 +87,7 @@ public:
 		return m_voxels;
 	}
 
-	const std::vector<float>& getScalarField() const
+	const std::vector<glm::vec4>& getScalarField() const
 	{
 		return m_scalar_field;
 	}

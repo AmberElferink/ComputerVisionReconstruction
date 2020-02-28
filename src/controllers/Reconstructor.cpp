@@ -42,7 +42,7 @@ Reconstructor::Reconstructor(
 	const size_t edge = 2 * m_height;
 	m_voxels_dimension = Vec3w(edge / m_step, edge / m_step, m_height / m_step);
 	m_voxels_amount = (edge / m_step) * (edge / m_step) * (m_height / m_step);
-	m_scalar_field.resize(m_voxels_amount, 0.0f);
+	m_scalar_field.resize(m_voxels_amount, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f));
 
 	initialize();
 }
@@ -124,6 +124,7 @@ void Reconstructor::initialize()
 				voxel->x = x;
 				voxel->y = y;
 				voxel->z = z;
+				voxel->color = Scalar((float)x / (float)xR, (float)y / (float)yR, (float)z / (float)zR);
 				voxel->camera_projection = vector<Point>(m_cameras.size());
 				voxel->valid_camera_projection = vector<int>(m_cameras.size(), 0);
 
@@ -166,7 +167,10 @@ void Reconstructor::update()
 	{
 		int camera_counter = 0;
 		Voxel* voxel = m_voxels[v];
-		m_scalar_field[v] = 0.0f;
+		m_scalar_field[v].a = 0.0f;
+		m_scalar_field[v].r = voxel->color[0];
+		m_scalar_field[v].g = voxel->color[1];
+		m_scalar_field[v].b = voxel->color[2];
 		for (size_t c = 0; c < m_cameras.size(); ++c)
 		{
 			if (voxel->valid_camera_projection[c])
@@ -184,7 +188,7 @@ void Reconstructor::update()
 		// If the voxel is present on all cameras
 		if (camera_counter == m_cameras.size())
 		{
-			m_scalar_field[v] = 1.0f;
+			m_scalar_field[v].a = 1.0f;
 #pragma omp critical //push_back is critical
 			visible_voxels.push_back(voxel);
 		}

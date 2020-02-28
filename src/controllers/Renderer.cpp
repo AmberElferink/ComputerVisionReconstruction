@@ -413,6 +413,7 @@ constexpr std::string_view marchingCubeComputeShaderSource =
 	"struct vertex_t {\n"
 	"    vec4 position;\n"
 	"    vec4 normal;\n"
+	"    vec4 color;\n"
 	"};\n"
 	"layout(std430, binding = 0) buffer indirect_data\n"
 	"{\n"
@@ -454,12 +455,20 @@ constexpr std::string_view marchingCubeComputeShaderSource =
 	"        return;\n"
 	"    }\n"
 	"    uint classification = 0;\n"
+	"    vec4 color = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n"
+	"    uint counter = 0;\n"
 	"    for (uint i = 0; i < 8; ++i) {\n"
 	"        uint bit = 1 << i;\n"
-	"        if (texelFetch(scalar_field, ivec3(gl_GlobalInvocationID) + ivec3(positions[i].xyz), 0).r > 0.5f) {\n"
+	"        vec4 voxel = texelFetch(scalar_field, ivec3(gl_GlobalInvocationID) + ivec3(positions[i].xyz), 0); //voxel.a contains 0 to 1 depending if the voxel is active or not) \n "
+	"        if (voxel.a > 0.5f) { //rgb contains the color \n "
+	"            color.rgb += voxel.rgb;\n"
+	"            color.a = 1.0f;\n"
+	"            counter++;\n"
 	"            classification |= bit;\n"
 	"        }\n"
 	"    }\n"
+	"    if(counter != 0)\n"
+	"		color.rgb /= counter;\n"
 	"    uint edge_mask = edgeTable[classification];\n"
 	"    vec4 vertlist[12] = {\n"
 	"        vec4(0, 0, 0, 0),\n"
@@ -512,6 +521,9 @@ constexpr std::string_view marchingCubeComputeShaderSource =
 	"        vertices[index].normal = normal;\n"
 	"        vertices[index + 1].normal = normal;\n"
 	"        vertices[index + 2].normal = normal;\n"
+	"        vertices[index].color = color;\n"
+	"        vertices[index + 1].color = color;\n"
+	"        vertices[index + 2].color = color;\n"
 	"    }\n"
 	"}\n";
 
@@ -523,10 +535,13 @@ constexpr std::string_view voxelVertexShaderSource =
 	"uniform vec3 offset;\n"
 	"layout (location = 0) in vec4 position;\n"
 	"layout (location = 1) in vec4 normal;\n"
+	"layout (location = 2) in vec4 color;\n"
 	"layout (location = 0) out vec4 out_position;\n"
 	"layout (location = 1) out vec3 out_normal;\n"
+	"layout (location = 2) out vec4 out_color;\n"
 	"void main()\n"
 	"{\n"
+	"    out_color = color;\n"
 	"    out_position = vec4(position.xyz * scale + offset, position.w);\n"
 	"    out_normal = normal.xyz;\n"
 	"    gl_Position = proj * view * out_position;\n"
@@ -536,10 +551,10 @@ constexpr std::string_view voxelFragmentShaderSource =
 	"#version 450 core\n"
 	"layout (location = 0) in vec4 position;\n"
 	"layout (location = 1) in vec3 normal;\n"
+	"layout (location = 2) in vec4 color;\n"
 	"layout (location = 0) out vec4 out_color;\n"
 	"uniform float light_intensity;\n"
 	"uniform vec3 light_position;\n"
-	"uniform vec3 color;\n"
 	"void main()\n"
 	"{\n"
 	"    vec4 dir = vec4(light_position, 1.0) - position;\n"
@@ -549,7 +564,7 @@ constexpr std::string_view voxelFragmentShaderSource =
 	"    vec3 reflectDir = reflect(-dir.xyz, normal);\n"
 	"    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
 	"    float lightIntensity = light_intensity * (clamp(dot(dir.xyz, normal), 0.0f, 1.0f) * 0.6f + spec) / dist2 + 0.4;\n"
-	"    out_color.rgb = lightIntensity * color;\n"
+	"    out_color.rgb = lightIntensity * color.rgb;\n"
 	"    out_color.a = 1.0f;\n"
 	"}\n";
 
@@ -897,6 +912,7 @@ void Renderer::initializeGeometry()
 		{
 			glm::vec4 position;
 			glm::vec4 normal;
+			glm::vec4 color;
 		};
 		Buffer::CreateInfo buffer_info;
 
@@ -908,6 +924,7 @@ void Renderer::initializeGeometry()
 		buffer_info.DebugName = "voxel vertex buffer";
 		auto vertex_buffer = Buffer::create(buffer_info);
 		const std::vector<Mesh::MeshAttributes> attributes{
+			Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
 			Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
 			Mesh::MeshAttributes{Mesh::MeshAttributes::DataType::Float, 4},
 		};
@@ -923,7 +940,7 @@ void Renderer::initializeGeometry()
 		texture_info.Width = dim[0];
 		texture_info.Height = dim[1];
 		texture_info.Depth = dim[2];
-		texture_info.DataFormat = Texture::Format::r32f;
+		texture_info.DataFormat = Texture::Format::rgba32f;
 		texture_info.DebugName = "Scalar field of voxels";
 		m_scalarField = Texture::create(texture_info);
 
@@ -1134,6 +1151,8 @@ void Renderer::display()
 	m_marchingCubesPipeline->setUniform("edge_lut", 1, *m_marchingCubeEdgeLookUpBuffer);
 	m_marchingCubesPipeline->setUniform("triangle_lut", 2, *m_marchingCubeTriangleLookUpBuffer);
 	m_marchingCubesPipeline->setUniform("vertex_data", 3, m_voxelMesh->getVertexBuffer());
+	m_marchingCubesPipeline->setUniform("color", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	m_scalarField->bind();
 	m_renderer->dispatch(dim[0] / 8, dim[1] / 8, dim[2] / 8);
 
 	m_renderPass->bind();
@@ -1166,7 +1185,6 @@ void Renderer::display()
 	auto camera_location = camera->getCameraLocation();
 	m_voxelPipeline->setUniform("light_position", glm::vec3(camera_location.x, camera_location.y, camera_location.x));
 	m_voxelPipeline->setUniform("light_intensity", 40000000.0f);
-	m_voxelPipeline->setUniform("color", glm::vec3(0.5f, 0.5f, 0.5f));
 	m_voxelMesh->draw(*m_indirectBuffer);
 
 	if (m_scene3d.isShowOrg())
