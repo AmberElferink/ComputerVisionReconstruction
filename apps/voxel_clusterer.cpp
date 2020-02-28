@@ -9,6 +9,7 @@
 
 using nl_uu_science_gmt::Camera;
 using nl_uu_science_gmt::ClusterLabeler;
+using nl_uu_science_gmt::ForegroundOptimizer;
 using nl_uu_science_gmt::Reconstructor;
 
 #define SHOW_RESULTS 0

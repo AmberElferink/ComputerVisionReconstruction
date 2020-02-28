@@ -11,8 +11,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
-#include <stddef.h>
-#include <string>
+#include <ForegroundOptimizer.h>
 
 #include "../utilities/General.h"
 
@@ -27,30 +26,43 @@ namespace nl_uu_science_gmt
  * Constructor
  * Scene properties class (mostly called by Glut)
  */
-Scene3DRenderer::Scene3DRenderer(
-		Reconstructor &r, vector<Camera> &cs) :
-				m_reconstructor(r),
-				m_cameras(cs),
-				m_num(4),
-				m_sphere_radius(1850)
+Scene3DRenderer::Scene3DRenderer(Reconstructor &r, vector<Camera> &cs)
+	: m_foregroundOptimizer(std::make_unique<ForegroundOptimizer>(4))
+	, m_reconstructor(r)
+	, m_cameras(cs)
+	, m_num(4)
+	, m_square_side_len()
+	, m_sphere_radius(1850)
+	, m_width(640)
+	, m_height(480)
+	, m_aspect_ratio(static_cast<float>(m_width) / static_cast<float>(m_height))
+	, m_arcball_eye()
+	, m_arcball_centre()
+	, m_arcball_up()
+	, m_camera_view(true)
+	, m_show_volume(true)
+	, m_show_grd_flr(true)
+	, m_show_cam(true)
+	, m_show_org(true)
+	, m_show_arcball(false)
+	, m_show_info(true)
+	, m_fullscreen(false)
+	, m_quit(false)
+	, m_paused(false)
+	, m_rotate(false)
+	, m_number_of_frames(m_cameras.front().getFramesAmount())
+	, m_current_frame(0)
+	, m_previous_frame(-1)
+	, m_current_camera(0)
+	, m_previous_camera(0)
+	, m_h_threshold(0)
+	, m_ph_threshold(m_h_threshold)
+	, m_s_threshold(19)
+	, m_ps_threshold(m_s_threshold)
+	, m_v_threshold(48)
+	, m_pv_threshold(m_v_threshold)
+	, m_thresholdMaxNoise(15)
 {
-	m_width = 640;
-	m_height = 480;
-	m_quit = false;
-	m_paused = false;
-	m_rotate = false;
-	m_camera_view = true;
-	m_show_volume = true;
-	m_show_grd_flr = true;
-	m_show_cam = true;
-	m_show_org = true;
-	m_show_arcball = false;
-	m_show_info = true;
-	m_fullscreen = false;
-
-	foregroundOptimizer = std::unique_ptr<ForegroundOptimizer>(new ForegroundOptimizer(4));
-
-
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
 	fs.open(m_cameras.front().getDataPath() / ".." / General::CBConfigFile, FileStorage::READ);
@@ -61,26 +73,6 @@ Scene3DRenderer::Scene3DRenderer(
 		fs["CheckerBoardSquareSize"] >> m_square_side_len;
 	}
 	fs.release();
-
-	m_current_camera = 0;
-	m_previous_camera = 0;
-
-	m_number_of_frames = m_cameras.front().getFramesAmount();
-	m_current_frame = 0;
-	m_previous_frame = -1;
-
-	
-
-	const int H = 0;
-	const int S = 19;
-	const int V = 48;
-	m_h_threshold = H;
-	m_ph_threshold = H;
-	m_s_threshold = S;
-	m_ps_threshold = S;
-	m_v_threshold = V;
-	m_pv_threshold = V;
-	m_thresholdMaxNoise = 15;
 
 	//calibThresholds();
 
@@ -122,7 +114,7 @@ void Scene3DRenderer::calibThresholds()
 	std::vector<cv::Mat> channels;
 	cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
 
-	foregroundOptimizer->optimizeThresholds(
+	m_foregroundOptimizer->optimizeThresholds(
 		m_thresholdMaxNoise,
 		m_thresholdMaxNoise,
 		m_cameras[3].getBgHsvChannels().at(0),
@@ -142,29 +134,24 @@ void Scene3DRenderer::calibThresholds()
  * Deconstructor
  * Free the memory of the floor_grid pointer vector
  */
-Scene3DRenderer::~Scene3DRenderer()
-{
-	for (size_t f = 0; f < m_floor_grid.size(); ++f)
-		for (size_t g = 0; g < m_floor_grid[f].size(); ++g)
-			delete m_floor_grid[f][g];
-}
+Scene3DRenderer::~Scene3DRenderer() = default;
 
 /**
  * Process the current frame on each camera
  */
 bool Scene3DRenderer::processFrame()
 {
-	for (size_t c = 0; c < m_cameras.size(); ++c)
+	for (auto & m_camera : m_cameras)
 	{
 		if (m_current_frame == m_previous_frame + 1)
 		{
-			m_cameras[c].advanceVideoFrame();
+			m_camera.advanceVideoFrame();
 		}
 		else if (m_current_frame != m_previous_frame)
 		{
-			m_cameras[c].getVideoFrame(m_current_frame);
+			m_camera.getVideoFrame(m_current_frame);
 		}
-		processForeground(m_cameras[c]);
+		processForeground(m_camera);
 	}
 	return true;
 }
@@ -182,7 +169,7 @@ void Scene3DRenderer::processForeground(Camera& camera)
 	std::vector<cv::Mat> channels;
 	cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
 
-	cv::Mat foreground = foregroundOptimizer->runHSVThresholding(
+	cv::Mat foreground = m_foregroundOptimizer->runHSVThresholding(
 		camera.getBgHsvChannels().at(0),
 		camera.getBgHsvChannels().at(1),
 		camera.getBgHsvChannels().at(2),
@@ -192,9 +179,9 @@ void Scene3DRenderer::processForeground(Camera& camera)
 		m_v_threshold
 	);
 
-	foregroundOptimizer->FindContours(foreground);
-	foregroundOptimizer->SaveMaxContours();
-	foregroundOptimizer->DrawMaxContours(foreground, true, 255);
+	m_foregroundOptimizer->FindContours(foreground);
+	m_foregroundOptimizer->SaveMaxContours();
+	m_foregroundOptimizer->DrawMaxContours(foreground, true, 255);
 
 	// Improve the foreground image
 	camera.setForegroundImage(foreground);
@@ -245,24 +232,24 @@ void Scene3DRenderer::createFloorGrid()
 	const int z_offset = 3;
 
 	// edge 1
-	vector<Point3i*> edge1;
+	vector<Point3i> edge1;
 	for (int y = -size * m_num; y <= size * m_num; y += size)
-		edge1.push_back(new Point3i(-size * m_num, y, z_offset));
+		edge1.emplace_back(-size * m_num, y, z_offset);
 
 	// edge 2
-	vector<Point3i*> edge2;
+	vector<Point3i> edge2;
 	for (int x = -size * m_num; x <= size * m_num; x += size)
-		edge2.push_back(new Point3i(x, size * m_num, z_offset));
+		edge2.emplace_back(x, size * m_num, z_offset);
 
 	// edge 3
-	vector<Point3i*> edge3;
+	vector<Point3i> edge3;
 	for (int y = -size * m_num; y <= size * m_num; y += size)
-		edge3.push_back(new Point3i(size * m_num, y, z_offset));
+		edge3.emplace_back(size * m_num, y, z_offset);
 
 	// edge 4
-	vector<Point3i*> edge4;
+	vector<Point3i> edge4;
 	for (int x = -size * m_num; x <= size * m_num; x += size)
-		edge4.push_back(new Point3i(x, -size * m_num, z_offset));
+		edge4.emplace_back(x, -size * m_num, z_offset);
 
 	m_floor_grid.push_back(edge1);
 	m_floor_grid.push_back(edge2);

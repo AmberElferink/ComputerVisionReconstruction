@@ -659,7 +659,7 @@ void Renderer::initializeGeometry()
 		buffer_info.DebugName = "grid vertex buffer";
 		auto vertex_buffer = Buffer::create(buffer_info);
 
-		vector<vector<Point3i *> > floor_grid = m_scene3d.getFloorGrid();
+		auto& floor_grid = m_scene3d.getFloorGrid();
 		info.Attributes = wireframe_attributes.data();
 		info.AttributeCount = wireframe_attributes.size();
 		info.MeshTopology = Mesh::Topology::Lines;
@@ -670,10 +670,10 @@ void Renderer::initializeGeometry()
 		for (int g = 0; g < gSize; g++)
 		{
 			auto vertexBase = &reinterpret_cast<glm::vec3*>(vertexMem.get())[g * 4];
-			vertexBase[0] = glm::vec3(floor_grid[0][g]->x, floor_grid[0][g]->y, floor_grid[0][g]->z);
-			vertexBase[1] = glm::vec3(floor_grid[2][g]->x, floor_grid[2][g]->y, floor_grid[2][g]->z);
-			vertexBase[2] = glm::vec3(floor_grid[1][g]->x, floor_grid[1][g]->y, floor_grid[1][g]->z);
-			vertexBase[3] = glm::vec3(floor_grid[3][g]->x, floor_grid[3][g]->y, floor_grid[3][g]->z);
+			vertexBase[0] = glm::vec3(floor_grid[0][g].x, floor_grid[0][g].y, floor_grid[0][g].z);
+			vertexBase[1] = glm::vec3(floor_grid[2][g].x, floor_grid[2][g].y, floor_grid[2][g].z);
+			vertexBase[2] = glm::vec3(floor_grid[1][g].x, floor_grid[1][g].y, floor_grid[1][g].z);
+			vertexBase[3] = glm::vec3(floor_grid[3][g].x, floor_grid[3][g].y, floor_grid[3][g].z);
 		}
 	}
 

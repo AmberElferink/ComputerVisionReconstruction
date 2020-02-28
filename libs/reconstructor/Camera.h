@@ -32,7 +32,7 @@ class Camera
 	cv::VideoCapture m_video;                        // Video reader
 
 	cv::Size m_plane_size;                           // Camera's FoV size
-	long m_frame_amount;                             // Amount of frames in this camera's video
+	int m_frame_amount;                              // Amount of frames in this camera's video
 
 	cv::Mat m_camera_matrix;                         // Camera matrix (3x3)
 	cv::Mat m_distortion_coeffs;                     // Distortion vector (5x1)
@@ -97,7 +97,7 @@ public:
 		m_video = video;
 	}
 
-	long getFramesAmount() const
+	int getFramesAmount() const
 	{
 		return m_frame_amount;
 	}
