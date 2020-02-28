@@ -5,9 +5,13 @@
 #include <Camera.h>
 #include <Reconstructor.h>
 #include <ForegroundOptimizer.h>
+#include <ClusterLabeler.h>
 
 using nl_uu_science_gmt::Camera;
+using nl_uu_science_gmt::ClusterLabeler;
 using nl_uu_science_gmt::Reconstructor;
+
+#define SHOW_RESULTS 0
 
 int main(int argc, char* argv[])
 {
@@ -73,47 +77,22 @@ int main(int argc, char* argv[])
     Reconstructor reconstructor(cameras);
     reconstructor.update();
 
-    std::vector<cv::Point2f> voxels_2d;
-    voxels_2d.reserve(reconstructor.getVisibleVoxelIndices().size());
-    for (auto i : reconstructor.getVisibleVoxelIndices()) {
-        voxels_2d.emplace_back(reconstructor.getVoxels()[i].coordinate.x, reconstructor.getVoxels()[i].coordinate.y);
-    }
+    ClusterLabeler labeler;
+    auto [centers, labels] = labeler.FindClusters(
+        NUM_CONTOURS,
+        NUM_RETRIES,
+        reconstructor.getVoxels(),
+        reconstructor.getVisibleVoxelIndices());
 
-    std::vector<int> labels;
-    labels.reserve(voxels_2d.size());
-    cv::Mat centers;
-    cv::kmeans(voxels_2d, NUM_CONTOURS, labels, cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 1000, 0.001), NUM_RETRIES, cv::KMEANS_PP_CENTERS, centers);
+    auto masks = labeler.ProjectTShirt(
+        NUM_CONTOURS,
+        cameras,
+        reconstructor.getVoxelSize() * 0.5f,
+        reconstructor.getVoxels(),
+        reconstructor.getVisibleVoxelIndices(),
+        labels);
 
-    {
-        std::vector<cv::Mat> masks(cameras.size() * NUM_CONTOURS);
-        for (auto& mask : masks)
-        {
-            mask = cv::Mat::zeros(cameras.front().getSize(), CV_8U);
-        }
-        auto step = reconstructor.getVoxelSize() * 0.5f;
-        for (uint32_t i = 0; i < labels.size(); ++i)
-        {
-            auto person_index = labels[i];
-            auto voxel_index = reconstructor.getVisibleVoxelIndices()[i];
-            auto& voxel = reconstructor.getVoxels()[voxel_index];
-            if (voxel.coordinate.z < 800.0f || voxel.coordinate.z > 1400.0f)
-            {
-                continue;
-            }
-            for (uint32_t j = 0; j < cameras.size(); ++j)
-            {
-                auto& camera = cameras[j];
-                auto& mask = masks[j * NUM_CONTOURS + person_index];
-                mask.at<uint8_t>(camera.projectOnView(voxel.coordinate)) = 0xFF;
-                mask.at<uint8_t>(camera.projectOnView(cv::Point3f(voxel.coordinate) + cv::Point3f(step, 0, 0))) = 0xFF;
-                mask.at<uint8_t>(camera.projectOnView(cv::Point3f(voxel.coordinate) + cv::Point3f(step, step, 0))) = 0xFF;
-                mask.at<uint8_t>(camera.projectOnView(cv::Point3f(voxel.coordinate) + cv::Point3f(0, step, 0))) = 0xFF;
-                mask.at<uint8_t>(camera.projectOnView(cv::Point3f(voxel.coordinate) + cv::Point3f(0, step, step))) = 0xFF;
-                mask.at<uint8_t>(camera.projectOnView(cv::Point3f(voxel.coordinate) + cv::Point3f(0, 0, step))) = 0xFF;
-                mask.at<uint8_t>(camera.projectOnView(cv::Point3f(voxel.coordinate) + cv::Point3f(step, 0, step))) = 0xFF;
-                mask.at<uint8_t>(camera.projectOnView(cv::Point3f(voxel.coordinate) + cv::Point3f(step, step, step))) = 0xFF;
-            }
-        }
+
 
         cv::FileStorage fs;
         fs.open((data_path / "centers.xml").u8string(), cv::FileStorage::WRITE);
@@ -128,27 +107,27 @@ int main(int argc, char* argv[])
             return EXIT_FAILURE;
         }
 
+    for (uint32_t i = 0; i < cameras.size(); ++i)
+    {
         for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
         {
-            for (uint32_t i = 0; i < cameras.size(); ++i)
-            {
-                cv::imwrite((data_path / ("cam" + std::to_string(i + 1)) / ("mask" + std::to_string(j + 1) + ".png")).u8string(),
-                            masks[j + i * NUM_CONTOURS],
-                            {cv::IMWRITE_PNG_COMPRESSION, 0});
-            }
+            cv::imwrite((data_path / ("cam" + std::to_string(i + 1)) / ("mask" + std::to_string(j + 1) + ".png")).u8string(),
+                        masks[i][j],
+                        {cv::IMWRITE_PNG_COMPRESSION, 0});
         }
-
-        //for (uint32_t i = 0; i < cameras.size(); ++i)
-        //{
-        //    for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
-        //    {
-        //        cv::imshow("mask #" + std::to_string(j), masks[j + i * NUM_CONTOURS]);
-        //    }
-        //    cv::imshow("camera image", cameras[i].getFrame());
-        //    cv::waitKey();
-        //}
-
     }
 
-    return EXIT_FAILURE;
+#if SHOW_RESULTS
+    for (uint32_t i = 0; i < cameras.size(); ++i)
+    {
+        for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
+        {
+            cv::imshow("mask #" + std::to_string(j), masks[i][j]);
+        }
+        cv::imshow("camera image", cameras[i].getFrame());
+        cv::waitKey();
+    }
+#endif // SHOW_RESULTS
+
+    return EXIT_SUCCESS;
 }

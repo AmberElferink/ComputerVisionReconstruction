@@ -25,6 +25,8 @@ class Pipeline {
         std::string_view DebugName;
     };
 
+    virtual ~Pipeline() = default;
+
     /// Bind pipeline with which to draw
     virtual void bind() = 0;
     /// Upload a uniform: data which is shared with all shader cores during dispatch.
