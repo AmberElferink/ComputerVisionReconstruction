@@ -144,7 +144,7 @@ void Reconstructor::update()
 	m_visible_voxels_indices.clear();
 	std::vector<uint32_t> visible_voxels;
 
-	uint32_t v;
+	int32_t v;
 #pragma omp parallel for schedule(runtime) private(v) shared(visible_voxels)
 	for (v = 0; v < (uint32_t) m_voxels_amount; ++v)
 	{

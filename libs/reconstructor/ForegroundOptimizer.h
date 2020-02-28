@@ -18,11 +18,11 @@ class ForegroundOptimizer
 
 public:
 	void FindContours(const cv::Mat& thresholdedImg);
-	void SaveMaxContours(); //save the max nr contours (nrContoursTracked) which have the largest size.
+	void SaveMaxContours(int removeWhiteContoursSmallerThan = 40, int removeBlackContoursSmallerThan = 20);
+	//save the max nr contours (nrContoursTracked) which have the largest size.
 	void DrawMaxContours(cv::Mat& image, bool removeBackground = true, cv::Scalar color = 255);
 	void optimizeThresholds(int maxExtraContoursS, int maxExtraContoursV, const cv::Mat& h_image, const cv::Mat& s_image, const cv::Mat& v_image, std::vector<cv::Mat>& channels, uint8_t &h_threshold, uint8_t &s_threshold, uint8_t &v_threshold);
 	cv::Mat runHSVThresholding(const cv::Mat & h_image, const cv::Mat & s_image, const cv::Mat & v_image, std::vector<cv::Mat>& channels, uint8_t h_threshold, uint8_t s_threshold, uint8_t v_threshold);
-
 	explicit ForegroundOptimizer(int nrContoursTracked);
 
 };

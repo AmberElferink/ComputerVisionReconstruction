@@ -48,7 +48,7 @@ bool Camera::initialize(const std::filesystem::path &background_image_file, cons
 	Mat bg_image;
 	if (std::filesystem::exists(m_data_path / background_image_file))
 	{
-		bg_image = imread(m_data_path / background_image_file);
+		bg_image = cv::imread((m_data_path / background_image_file).u8string());
 		if (bg_image.empty())
 		{
 			std::cout << "Unable to read: " << m_data_path / background_image_file << std::endl;
@@ -68,7 +68,7 @@ bool Camera::initialize(const std::filesystem::path &background_image_file, cons
 	split(bg_hsv_im, m_bg_hsv_channels);
 
 	// Open the video for this camera
-	m_video = VideoCapture(m_data_path / video_file);
+	m_video = VideoCapture((m_data_path / video_file).u8string());
 	assert(m_video.isOpened());
 
 	// Assess the image size
@@ -83,11 +83,11 @@ bool Camera::initialize(const std::filesystem::path &background_image_file, cons
 	m_video.set(cv::CAP_PROP_POS_AVI_RATIO, 0);  // Go back to the start
 
 	m_video.release(); //Re-open the file because _video.set(CV_CAP_PROP_POS_AVI_RATIO, 1) may screw it up
-	m_video = cv::VideoCapture(m_data_path / video_file);
+	m_video = cv::VideoCapture((m_data_path / video_file).u8string());
 
 	// Read the camera properties (XML)
 	FileStorage fs;
-	fs.open(m_data_path / m_cam_props_file, FileStorage::READ);
+	fs.open((m_data_path / m_cam_props_file).u8string(), FileStorage::READ);
 	if (fs.isOpened())
 	{
 		Mat cam_mat, dis_coe, rot_val, tra_val;

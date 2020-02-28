@@ -53,7 +53,7 @@ Scene3DRenderer::Scene3DRenderer(
 
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
-	fs.open(m_cameras.front().getDataPath() / ".." / General::CBConfigFile, FileStorage::READ);
+	fs.open((m_cameras.front().getDataPath() / ".." / General::CBConfigFile).u8string(), FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["CheckerBoardWidth"] >> m_board_size.width;
@@ -193,7 +193,7 @@ void Scene3DRenderer::processForeground(Camera& camera)
 	);
 
 	foregroundOptimizer->FindContours(foreground);
-	foregroundOptimizer->SaveMaxContours();
+	foregroundOptimizer->SaveMaxContours(1000, 100);
 	foregroundOptimizer->DrawMaxContours(foreground, true, 255);
 
 	// Improve the foreground image

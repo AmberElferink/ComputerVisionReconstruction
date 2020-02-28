@@ -42,6 +42,7 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 # 
 # #############################################
 
+#states where other CMakeLists.txt are stored to make the dependent executables
 add_subdirectory(libs)
 add_subdirectory(apps)
 add_subdirectory(thirdparty/glad)
@@ -180,7 +181,7 @@ target_link_libraries (${CMAKE_PROJECT_NAME}
 		glad
 		imgui
 		glm
-		reconstructor
+		reconstructor #this refers to a dependency on our own code (libs/CMakeLists.txt)
 		OpenGL::GL
 		${SDL2_LIBRARIES}
 		${OpenCV_LIBS})

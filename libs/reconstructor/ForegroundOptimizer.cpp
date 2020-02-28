@@ -104,7 +104,8 @@ void ForegroundOptimizer::FindContours(const cv::Mat& thresholdedImg)
 	cv::findContours(thresholdedImg, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0, 0));
 }
 
-void ForegroundOptimizer::SaveMaxContours()
+//put 0 for removeContoursSmallerThan to not remove any contours
+void ForegroundOptimizer::SaveMaxContours( int removeWhiteContoursSmallerThan, int removeBlackContoursSmallerThan)
 {
 	maxContourAreas.clear();
 	maxContourAreas.resize(nrContoursTracked);
@@ -116,12 +117,12 @@ void ForegroundOptimizer::SaveMaxContours()
 	for (int i = 0; i < contours.size(); i++)
 	{
 		double areaBlackPositive = contourArea(contours[i], true);
-		if (areaBlackPositive > 20)
+		if (areaBlackPositive > removeBlackContoursSmallerThan)
 		{
 			blackContours.push_back(i); //save black contours to draw them over the white ones if they are large enough to not necessarily be noise.
 		}
 		double area = -areaBlackPositive; // negative means white apparently, and you want white
-		if (area > maxContourAreas[nrContoursTracked - 1]) 
+		if (area > maxContourAreas[nrContoursTracked - 1] && area > removeWhiteContoursSmallerThan) 
 		{
 			saveMaxContour(area, i);
 		}
@@ -131,10 +132,12 @@ void ForegroundOptimizer::SaveMaxContours()
 
 void ForegroundOptimizer::DrawMaxContours(cv::Mat& image, bool removeBackground, cv::Scalar color)
 {
+	int nrMaxContours = maxContourIndices.size();
 	if (removeBackground)
 	{
 		image = cv::Mat::zeros(image.size(), image.type());
-		for (int i = 0; i < nrContoursTracked; i++)
+		
+		for (int i = 0; i < nrMaxContours; i++)
 		{
 			cv::drawContours(image, contours, maxContourIndices[i], color, cv::FILLED);
 		}
@@ -145,7 +148,7 @@ void ForegroundOptimizer::DrawMaxContours(cv::Mat& image, bool removeBackground,
 	}
 	else
 	{
-		for (int i = 0; i < nrContoursTracked; i++)
+		for (int i = 0; i < nrMaxContours; i++)
 		{
 			cv::drawContours(image, contours, maxContourIndices[i], color, cv::FILLED);
 		}

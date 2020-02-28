@@ -48,18 +48,7 @@ int main(int argc, char* argv[])
         int thresholdMaxNoise = 15;
 
         ForegroundOptimizer foregroundOptimizer(NUM_CONTOURS);
-        // TODO(amber): Debug this
-//        foregroundOptimizer.optimizeThresholds(
-//            thresholdMaxNoise,
-//            thresholdMaxNoise,
-//            camera.getBgHsvChannels().at(0),
-//            camera.getBgHsvChannels().at(1),
-//            camera.getBgHsvChannels().at(2),
-//            channels,
-//            h_threshold,
-//            s_threshold,
-//            v_threshold
-//        );
+
         cv::Mat foreground = foregroundOptimizer.runHSVThresholding(
             camera.getBgHsvChannels().at(0),
             camera.getBgHsvChannels().at(1),
@@ -71,13 +60,14 @@ int main(int argc, char* argv[])
         );
 
         foregroundOptimizer.FindContours(foreground);
-        foregroundOptimizer.SaveMaxContours();
-
+        foregroundOptimizer.SaveMaxContours(1000, 500);
+		
+		foregroundOptimizer.DrawMaxContours(foreground);
         // Improve the foreground image
         camera.setForegroundImage(foreground);
 
-//        cv::imshow("foreground", foreground);
-//        cv::waitKey();
+        //cv::imshow("foreground", foreground);
+        //cv::waitKey();
     }
 
     Reconstructor reconstructor(cameras);
@@ -126,7 +116,7 @@ int main(int argc, char* argv[])
         }
 
         cv::FileStorage fs;
-        fs.open(data_path / "centers.xml", cv::FileStorage::WRITE);
+        fs.open((data_path / "centers.xml").u8string(), cv::FileStorage::WRITE);
         if (fs.isOpened())
         {
             fs << "Centers" << centers;
@@ -142,21 +132,21 @@ int main(int argc, char* argv[])
         {
             for (uint32_t i = 0; i < cameras.size(); ++i)
             {
-                cv::imwrite(data_path / ("cam" + std::to_string(i + 1)) / ("mask" + std::to_string(j + 1) + ".png"),
+                cv::imwrite((data_path / ("cam" + std::to_string(i + 1)) / ("mask" + std::to_string(j + 1) + ".png")).u8string(),
                             masks[j + i * NUM_CONTOURS],
                             {cv::IMWRITE_PNG_COMPRESSION, 0});
             }
         }
 
-//        for (uint32_t i = 0; i < cameras.size(); ++i)
-//        {
-//            for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
-//            {
-//                cv::imshow("mask #" + std::to_string(j), masks[j + i * NUM_CONTOURS]);
-//            }
-//            cv::imshow("camera image", cameras[i].getFrame());
-//            cv::waitKey();
-//        }
+        //for (uint32_t i = 0; i < cameras.size(); ++i)
+        //{
+        //    for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
+        //    {
+        //        cv::imshow("mask #" + std::to_string(j), masks[j + i * NUM_CONTOURS]);
+        //    }
+        //    cv::imshow("camera image", cameras[i].getFrame());
+        //    cv::waitKey();
+        //}
 
     }
 
