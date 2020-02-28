@@ -11,7 +11,7 @@ using nl_uu_science_gmt::Camera;
 using nl_uu_science_gmt::ClusterLabeler;
 using nl_uu_science_gmt::Reconstructor;
 
-#define SHOW_RESULTS 0
+#define SHOW_RESULTS 1
 
 int main(int argc, char* argv[])
 {
@@ -92,6 +92,7 @@ int main(int argc, char* argv[])
         reconstructor.getVisibleVoxelIndices(),
         labels);
 
+	labeler.CleanupMasks(masks);
 
 
         cv::FileStorage fs;

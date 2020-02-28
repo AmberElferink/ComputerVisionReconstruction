@@ -1,10 +1,14 @@
 #include "ClusterLabeler.h"
+#include "ForegroundOptimizer.h"
 
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 using nl_uu_science_gmt::Camera;
 using nl_uu_science_gmt::ClusterLabeler;
 using nl_uu_science_gmt::Voxel;
+
+
 
 std::pair<cv::Mat, std::vector<int>> ClusterLabeler::FindClusters(uint8_t num_clusters, uint8_t num_retries, const std::vector<Voxel> &voxels, const std::vector<uint32_t> &indices)
 {
@@ -66,3 +70,18 @@ std::vector<std::vector<cv::Mat>> nl_uu_science_gmt::ClusterLabeler::ProjectTShi
 
 	return masks;
 }
+
+void ClusterLabeler::CleanupMasks(std::vector<std::vector<cv::Mat>> masks)
+{
+	ForegroundOptimizer optimizer(1);
+	for (auto camera : masks)
+	{
+		for (auto mask : camera)
+		{
+			optimizer.FindContours(mask);
+			optimizer.SaveMaxContours(1000, 50);
+			optimizer.DrawMaxContours(mask);
+		}
+	}
+}
+
