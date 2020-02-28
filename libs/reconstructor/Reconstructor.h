@@ -8,31 +8,18 @@
 #ifndef RECONSTRUCTOR_H_
 #define RECONSTRUCTOR_H_
 
-#include <opencv2/core/core.hpp>
 #include <cstddef>
 #include <vector>
 #include <glm/vec4.hpp>
 
 #include "Camera.h"
+#include "Voxel.h"
 
 namespace nl_uu_science_gmt
 {
 
 class Reconstructor
 {
-public:
-	/*
-	 * Voxel structure
-	 * Represents a 3D pixel in the half space
-	 */
-	struct Voxel
-	{
-		cv::Point3i coordinate;                    // Coordinates
-		cv::Scalar color;                          // Color
-		std::vector<cv::Point> camera_projection;  // Projection location for camera[c]'s FoV (2D)
-		std::vector<int> valid_camera_projection;  // Flag if camera projection is in camera[c]'s FoV
-	};
-
 private:
 	const std::vector<Camera> &m_cameras;  // vector of pointers to cameras
 	const int m_height;                     // Cube half-space height from floor to ceiling

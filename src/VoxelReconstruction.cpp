@@ -94,7 +94,8 @@ void VoxelReconstruction::run(int argc, char** argv)
 {
 	for (auto& v : m_cam_views)
 	{
-		assert(v.initialize(General::BackgroundImageFile, General::VideoFile));
+		auto ok = v.initialize(General::BackgroundImageFile, General::VideoFile);
+		assert(ok);
 	}
 
 	destroyAllWindows();
