@@ -8,7 +8,7 @@ class GraphicsPipeline : public Pipeline
 public:
   /// Private unique constructor forcing the use of factory function which
   /// can return null unlike constructor.
-  GraphicsPipeline(uint32_t program, uint32_t viewportWidth, uint32_t viewportHeight, float lineWidth);
+  GraphicsPipeline(uint32_t program, uint32_t viewportWidth, uint32_t viewportHeight);
   virtual ~GraphicsPipeline();
 
   void bind() override;
@@ -21,7 +21,6 @@ public:
   const uint32_t program_;
   const uint32_t viewportWidth_;
   const uint32_t viewportHeight_;
-  const float lineWidth_;
 };
 
 #endif // GRAPHICSPIPELINE_H

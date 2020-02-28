@@ -50,6 +50,7 @@ private:
   std::unique_ptr<Context> m_renderer;
   std::unique_ptr<Ui> m_ui;
   std::unique_ptr<RenderPass> m_renderPass;
+  std::unique_ptr<RenderPass> m_overlayRenderPass;
   std::unique_ptr<Pipeline> m_wireframePipeline;
   std::unique_ptr<Pipeline> m_wPipeline;
   std::unique_ptr<Pipeline> m_arcballPipeline;

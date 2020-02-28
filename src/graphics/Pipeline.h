@@ -18,7 +18,6 @@ class Pipeline {
         uint32_t ViewportHeight;
         std::string_view VertexShaderSource;
         std::string_view FragmentShaderSource;
-        float LineWidth;
         std::string_view DebugName;
     };
     struct ComputeCreateInfo {

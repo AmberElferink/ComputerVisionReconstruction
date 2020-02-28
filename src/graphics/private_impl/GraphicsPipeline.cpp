@@ -5,11 +5,10 @@
 
 #include "../Buffer.h"
 
-GraphicsPipeline::GraphicsPipeline(uint32_t program, uint32_t viewportWidth, uint32_t viewportHeight, float lineWidth)
+GraphicsPipeline::GraphicsPipeline(uint32_t program, uint32_t viewportWidth, uint32_t viewportHeight)
     : program_(program)
     , viewportWidth_(viewportWidth)
     , viewportHeight_(viewportHeight)
-    , lineWidth_(lineWidth)
 {}
 
 GraphicsPipeline::~GraphicsPipeline() { glDeleteProgram(program_); }
@@ -17,7 +16,6 @@ GraphicsPipeline::~GraphicsPipeline() { glDeleteProgram(program_); }
 void GraphicsPipeline::bind() {
     glViewport(0, 0, viewportWidth_, viewportHeight_);
     glUseProgram(program_);
-    glLineWidth(lineWidth_);
 }
 
 bool GraphicsPipeline::setUniform(const std::string_view& uniform_name, const glm::mat4& uniform)

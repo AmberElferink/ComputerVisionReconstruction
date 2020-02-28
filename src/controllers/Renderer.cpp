@@ -594,6 +594,11 @@ void Renderer::initialize(const char* win_name, int argc, char** argv)
 	passInfo.DebugName = "Main Render Pass";
 	m_renderPass = RenderPass::create(passInfo);
 
+	passInfo.Clear = false;
+	passInfo.DepthTest = false;
+	passInfo.DebugName = "Overlay Render Pass";
+	m_overlayRenderPass = RenderPass::create(passInfo);
+
 	initializeGeometry();
 	initializePipelines();
 	m_projectionMatrix = glm::perspective(glm::radians(50.0f), m_renderer->getAspectRatio(), 1.0f, 40000.0f);
@@ -979,19 +984,16 @@ void Renderer::initializePipelines()
 	info.ViewportHeight = m_scene3d.getHeight();
 	info.VertexShaderSource = viewProjVertexShaderSource;
 	info.FragmentShaderSource = gridFragmentShaderSource;
-	info.LineWidth = 1.0f;
 	info.DebugName = "grid";
 	m_wireframePipeline = Pipeline::create(info);
 
 	info.VertexShaderSource = wVertexShaderSource;
 	info.FragmentShaderSource = wFragmentShaderSource;
-	info.LineWidth = 1.5f;
 	info.DebugName = "origin";
 	m_wPipeline = Pipeline::create(info);
 
 	info.VertexShaderSource = arcballVertexShaderSource;
 	info.FragmentShaderSource = arcballFragmentShaderSource;
-	info.LineWidth = 1.0f;
 	info.DebugName = "arcball";
 	m_arcballPipeline = Pipeline::create(info);
 
@@ -1187,6 +1189,7 @@ void Renderer::display()
 	m_voxelPipeline->setUniform("light_intensity", 40000000.0f);
 	m_voxelMesh->draw(*m_indirectBuffer);
 
+	m_overlayRenderPass->bind();
 	if (m_scene3d.isShowOrg())
 	{
 		m_wPipeline->bind();
