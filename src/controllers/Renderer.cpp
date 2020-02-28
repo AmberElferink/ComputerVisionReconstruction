@@ -1153,7 +1153,6 @@ void Renderer::display()
 	m_marchingCubesPipeline->setUniform("edge_lut", 1, *m_marchingCubeEdgeLookUpBuffer);
 	m_marchingCubesPipeline->setUniform("triangle_lut", 2, *m_marchingCubeTriangleLookUpBuffer);
 	m_marchingCubesPipeline->setUniform("vertex_data", 3, m_voxelMesh->getVertexBuffer());
-	m_marchingCubesPipeline->setUniform("color", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
 	m_scalarField->bind();
 	m_renderer->dispatch(dim[0] / 8, dim[1] / 8, dim[2] / 8);
 
