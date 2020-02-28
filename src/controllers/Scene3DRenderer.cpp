@@ -28,7 +28,7 @@ namespace nl_uu_science_gmt
  * Scene properties class (mostly called by Glut)
  */
 Scene3DRenderer::Scene3DRenderer(
-		Reconstructor &r, const vector<Camera*> &cs) :
+		Reconstructor &r, vector<Camera> &cs) :
 				m_reconstructor(r),
 				m_cameras(cs),
 				m_num(4),
@@ -53,7 +53,7 @@ Scene3DRenderer::Scene3DRenderer(
 
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
-	fs.open(m_cameras.front()->getDataPath() + ".." + string(PATH_SEP) + General::CBConfigFile, FileStorage::READ);
+	fs.open(m_cameras.front().getDataPath() / ".." / General::CBConfigFile, FileStorage::READ);
 	if (fs.isOpened())
 	{
 		fs["CheckerBoardWidth"] >> m_board_size.width;
@@ -65,7 +65,7 @@ Scene3DRenderer::Scene3DRenderer(
 	m_current_camera = 0;
 	m_previous_camera = 0;
 
-	m_number_of_frames = m_cameras.front()->getFramesAmount();
+	m_number_of_frames = m_cameras.front().getFramesAmount();
 	m_current_frame = 0;
 	m_previous_frame = -1;
 
@@ -92,11 +92,20 @@ Scene3DRenderer::Scene3DRenderer(
 
 void Scene3DRenderer::updateTrackbars()
 {
-	createTrackbar("max noise", VIDEO_WINDOW, &m_thresholdMaxNoise, 255);
-	createTrackbar("Frame", VIDEO_WINDOW, &m_current_frame, m_number_of_frames - 2);
-	createTrackbar("H", VIDEO_WINDOW, &m_h_threshold, 255);
-	createTrackbar("S", VIDEO_WINDOW, &m_s_threshold, 255);
-	createTrackbar("V", VIDEO_WINDOW, &m_v_threshold, 255);
+	createTrackbar("max noise", VIDEO_WINDOW.data(), &m_thresholdMaxNoise, 255);
+	createTrackbar("Frame", VIDEO_WINDOW.data(), &m_current_frame, m_number_of_frames - 2);
+
+	int h_threshold = m_h_threshold;
+	int s_threshold = m_s_threshold;
+	int v_threshold = m_v_threshold;
+
+	createTrackbar("H", VIDEO_WINDOW.data(), &h_threshold, 255);
+	createTrackbar("S", VIDEO_WINDOW.data(), &s_threshold, 255);
+	createTrackbar("V", VIDEO_WINDOW.data(), &v_threshold, 255);
+
+	h_threshold = static_cast<uint8_t>(m_h_threshold);
+	s_threshold = static_cast<uint8_t>(m_s_threshold);
+	v_threshold = static_cast<uint8_t>(m_v_threshold);
 }
 
 void Scene3DRenderer::calibThresholds()
@@ -105,10 +114,10 @@ void Scene3DRenderer::calibThresholds()
 	m_s_threshold = 255;
 	m_v_threshold = 255;
 
-	m_cameras[3]->advanceVideoFrame();
-	assert(!m_cameras[3]->getVideoFrame(0).empty());
+	m_cameras[3].advanceVideoFrame();
+	assert(!m_cameras[3].getVideoFrame(0).empty());
 	Mat hsv_image;
-	cvtColor(m_cameras[3]->getVideoFrame(0), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
+	cvtColor(m_cameras[3].getVideoFrame(0), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
 	std::vector<cv::Mat> channels;
 	cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
@@ -116,9 +125,9 @@ void Scene3DRenderer::calibThresholds()
 	foregroundOptimizer->optimizeThresholds(
 		m_thresholdMaxNoise,
 		m_thresholdMaxNoise,
-		m_cameras[3]->getBgHsvChannels().at(0),
-		m_cameras[3]->getBgHsvChannels().at(1),
-		m_cameras[3]->getBgHsvChannels().at(2),
+		m_cameras[3].getBgHsvChannels().at(0),
+		m_cameras[3].getBgHsvChannels().at(1),
+		m_cameras[3].getBgHsvChannels().at(2),
 		channels,
 		m_h_threshold,
 		m_s_threshold,
@@ -149,37 +158,34 @@ bool Scene3DRenderer::processFrame()
 	{
 		if (m_current_frame == m_previous_frame + 1)
 		{
-			m_cameras[c]->advanceVideoFrame();
+			m_cameras[c].advanceVideoFrame();
 		}
 		else if (m_current_frame != m_previous_frame)
 		{
-			m_cameras[c]->getVideoFrame(m_current_frame);
+			m_cameras[c].getVideoFrame(m_current_frame);
 		}
-		assert(m_cameras[c] != NULL);
 		processForeground(m_cameras[c]);
 	}
 	return true;
 }
 
-
-
 /**
  * Separate the background from the foreground
  * ie.: Create an 8 bit image where only the foreground of the scene is white (255)
  */
-void Scene3DRenderer::processForeground(Camera* camera)
+void Scene3DRenderer::processForeground(Camera& camera)
 {
-	assert(!camera->getFrame().empty());
+	assert(!camera.getFrame().empty());
 	Mat hsv_image;
-	cvtColor(camera->getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
+	cvtColor(camera.getFrame(), hsv_image, CV_BGR2HSV);  // from BGR to HSV color space
 
 	std::vector<cv::Mat> channels;
 	cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
 
 	cv::Mat foreground = foregroundOptimizer->runHSVThresholding(
-		camera->getBgHsvChannels().at(0), 
-		camera->getBgHsvChannels().at(1), 
-		camera->getBgHsvChannels().at(2), 
+		camera.getBgHsvChannels().at(0),
+		camera.getBgHsvChannels().at(1),
+		camera.getBgHsvChannels().at(2),
 		channels,
 		m_h_threshold,
 		m_s_threshold,
@@ -189,13 +195,10 @@ void Scene3DRenderer::processForeground(Camera* camera)
 	foregroundOptimizer->FindContours(foreground);
 	foregroundOptimizer->SaveMaxContours();
 	foregroundOptimizer->DrawMaxContours(foreground, true, 255);
-	
 
 	// Improve the foreground image
-	camera->setForegroundImage(foreground);
+	camera.setForegroundImage(foreground);
 }
-
-
 
 /**
  * Set currently visible camera to the given camera id
@@ -209,9 +212,9 @@ void Scene3DRenderer::setCamera(
 	{
 		m_previous_camera = m_current_camera;
 		m_current_camera = camera;
-		m_arcball_eye.x = m_cameras[camera]->getCameraPlane()[0].x;
-		m_arcball_eye.y = m_cameras[camera]->getCameraPlane()[0].y;
-		m_arcball_eye.z = m_cameras[camera]->getCameraPlane()[0].z;
+		m_arcball_eye.x = m_cameras[camera].getCameraPlane()[0].x;
+		m_arcball_eye.y = m_cameras[camera].getCameraPlane()[0].y;
+		m_arcball_eye.z = m_cameras[camera].getCameraPlane()[0].z;
 		m_arcball_up.x = 0.0f;
 		m_arcball_up.y = 0.0f;
 		m_arcball_up.z = 1.0f;

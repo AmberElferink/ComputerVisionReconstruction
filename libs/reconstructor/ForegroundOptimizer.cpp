@@ -1,9 +1,12 @@
 #include "ForegroundOptimizer.h"
 #include <opencv2/imgproc/imgproc.hpp>
 
+ForegroundOptimizer::ForegroundOptimizer(int nrContoursTracked)
+	: nrContoursTracked(nrContoursTracked)
+{
+}
 
-
-void ForegroundOptimizer::optimizeThresholds(int maxExtraContoursS, int maxExtraContoursV, const cv::Mat& h_image, const cv::Mat& s_image, const cv::Mat& v_image, std::vector<cv::Mat>& channels, int& h_threshold, int& s_threshold, int& v_threshold)
+void ForegroundOptimizer::optimizeThresholds(int maxExtraContoursS, int maxExtraContoursV, const cv::Mat& h_image, const cv::Mat& s_image, const cv::Mat& v_image, std::vector<cv::Mat>& channels, uint8_t &h_threshold, uint8_t &s_threshold, uint8_t &v_threshold)
 {
 	contours.clear();
 	int lastMergedContours_i = 255;
@@ -60,7 +63,7 @@ void ForegroundOptimizer::optimizeThresholds(int maxExtraContoursS, int maxExtra
 	
 }
 
-cv::Mat ForegroundOptimizer::runHSVThresholding(const cv::Mat& h_image, const cv::Mat& s_image, const cv::Mat& v_image, std::vector<cv::Mat>& channels, int h_threshold, int s_threshold, int v_threshold)
+cv::Mat ForegroundOptimizer::runHSVThresholding(const cv::Mat& h_image, const cv::Mat& s_image, const cv::Mat& v_image, std::vector<cv::Mat>& channels, uint8_t h_threshold, uint8_t s_threshold, uint8_t v_threshold)
 {
 
 	// Background subtraction H
@@ -125,7 +128,6 @@ void ForegroundOptimizer::SaveMaxContours()
 
 	}
 }
-
 
 void ForegroundOptimizer::DrawMaxContours(cv::Mat& image, bool removeBackground, cv::Scalar color)
 {

@@ -9,13 +9,9 @@
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/operations.hpp>
-#include <opencv2/core/types_c.h>
 #include <cassert>
 #include <iostream>
 
-#include "../utilities/General.h"
-
-using namespace std;
 using namespace cv;
 
 namespace nl_uu_science_gmt
@@ -26,17 +22,17 @@ namespace nl_uu_science_gmt
  * Voxel reconstruction class
  */
 Reconstructor::Reconstructor(
-		const vector<Camera*> &cs) :
+		const std::vector<Camera> &cs) :
 				m_cameras(cs),
 				m_height(2048),
 				m_step(32)
 {
-	for (size_t c = 0; c < m_cameras.size(); ++c)
+	for (const auto& c : m_cameras)
 	{
 		if (m_plane_size.area() > 0)
-			assert(m_plane_size.width == m_cameras[c]->getSize().width && m_plane_size.height == m_cameras[c]->getSize().height);
+			assert(m_plane_size.width == c.getSize().width && m_plane_size.height == c.getSize().height);
 		else
-			m_plane_size = m_cameras[c]->getSize();
+			m_plane_size = c.getSize();
 	}
 
 	const size_t edge = 2 * m_height;
@@ -47,17 +43,7 @@ Reconstructor::Reconstructor(
 	initialize();
 }
 
-/**
- * Deconstructor
- * Free the memory of the pointer vectors
- */
-Reconstructor::~Reconstructor()
-{
-	for (size_t c = 0; c < m_corners.size(); ++c)
-		delete m_corners.at(c);
-	for (size_t v = 0; v < m_voxels.size(); ++v)
-		delete m_voxels.at(v);
-}
+Reconstructor::~Reconstructor() = default;
 
 /**
  * Create some Look Up Tables
@@ -80,19 +66,19 @@ void Reconstructor::initialize()
 
 	// Save the 8 volume corners
 	// bottom
-	m_corners.push_back(new Point3f((float) xL, (float) yL, (float) zL));
-	m_corners.push_back(new Point3f((float) xL, (float) yR, (float) zL));
-	m_corners.push_back(new Point3f((float) xR, (float) yR, (float) zL));
-	m_corners.push_back(new Point3f((float) xR, (float) yL, (float) zL));
+	m_corners.emplace_back((float) xL, (float) yL, (float) zL);
+	m_corners.emplace_back((float) xL, (float) yR, (float) zL);
+	m_corners.emplace_back((float) xR, (float) yR, (float) zL);
+	m_corners.emplace_back((float) xR, (float) yL, (float) zL);
 
 	// top
-	m_corners.push_back(new Point3f((float) xL, (float) yL, (float) zR));
-	m_corners.push_back(new Point3f((float) xL, (float) yR, (float) zR));
-	m_corners.push_back(new Point3f((float) xR, (float) yR, (float) zR));
-	m_corners.push_back(new Point3f((float) xR, (float) yL, (float) zR));
+	m_corners.emplace_back((float) xL, (float) yL, (float) zR);
+	m_corners.emplace_back((float) xL, (float) yR, (float) zR);
+	m_corners.emplace_back((float) xR, (float) yR, (float) zR);
+	m_corners.emplace_back((float) xR, (float) yL, (float) zR);
 
 	// Acquire some memory for efficiency
-	cout << "Initializing " << m_voxels_amount << " voxels..." << endl;
+	std::cout << "Initializing " << m_voxels_amount << " voxels..." << std::endl;
 	m_voxels.resize(m_voxels_amount);
 
 	int z;
@@ -107,7 +93,7 @@ void Reconstructor::initialize()
 		if (done > pdone)
 		{
 			pdone = done;
-			cout << done << "%\r" << flush;
+			std::cout << done << "%\r" << std::flush;
 		}
 
 		int y, x;
@@ -119,20 +105,20 @@ void Reconstructor::initialize()
 			{
 				const int xp = (x - xL) / m_step;
 
-				// Create all voxels
-				Voxel* voxel = new Voxel;
-				voxel->x = x;
-				voxel->y = y;
-				voxel->z = z;
-				voxel->color = Scalar((float)x / (float)xR, (float)y / (float)yR, (float)z / (float)zR);
-				voxel->camera_projection = vector<Point>(m_cameras.size());
-				voxel->valid_camera_projection = vector<int>(m_cameras.size(), 0);
-
 				const int p = zp * plane + yp * plane_x + xp;  // The voxel's index
+
+				// Create all voxels
+				Voxel* voxel = &m_voxels[p];
+				voxel->coordinate.x = x;
+				voxel->coordinate.y = y;
+				voxel->coordinate.z = z;
+				voxel->color = Scalar((float)x / (float)xR, (float)y / (float)yR, (float)z / (float)zR);
+				voxel->camera_projection = std::vector<Point>(m_cameras.size());
+				voxel->valid_camera_projection = std::vector<int>(m_cameras.size(), 0);
 
 				for (size_t c = 0; c < m_cameras.size(); ++c)
 				{
-					Point point = m_cameras[c]->projectOnView(Point3f((float) x, (float) y, (float) z));
+					Point point = m_cameras[c].projectOnView(Point3f((float)x, (float)y, (float)z));
 
 					// Save the pixel coordinates 'point' of the voxel projection on camera 'c'
 					voxel->camera_projection[(int) c] = point;
@@ -141,14 +127,11 @@ void Reconstructor::initialize()
 					if (point.x >= 0 && point.x < m_plane_size.width && point.y >= 0 && point.y < m_plane_size.height)
 						voxel->valid_camera_projection[(int) c] = 1;
 				}
-
-				//Writing voxel 'p' is not critical as it's unique (thread safe)
-				m_voxels[p] = voxel;
 			}
 		}
 	}
 
-	cout << "done!" << endl;
+	std::cout << "done!" << std::endl;
 }
 
 /**
@@ -158,15 +141,15 @@ void Reconstructor::initialize()
  */
 void Reconstructor::update()
 {
-	m_visible_voxels.clear();
-	std::vector<Voxel*> visible_voxels;
+	m_visible_voxels_indices.clear();
+	std::vector<uint32_t> visible_voxels;
 
-	int v;
+	uint32_t v;
 #pragma omp parallel for schedule(runtime) private(v) shared(visible_voxels)
-	for (v = 0; v < (int) m_voxels_amount; ++v)
+	for (v = 0; v < (uint32_t) m_voxels_amount; ++v)
 	{
 		int camera_counter = 0;
-		Voxel* voxel = m_voxels[v];
+		const Voxel* voxel = &m_voxels[v];
 		m_scalar_field[v].a = 0.0f;
 		m_scalar_field[v].r = voxel->color[0];
 		m_scalar_field[v].g = voxel->color[1];
@@ -178,7 +161,7 @@ void Reconstructor::update()
 				const Point point = voxel->camera_projection[c];
 
 				//If there's a white pixel on the foreground image at the projection point, add the camera
-				if (m_cameras[c]->getForegroundImage().at<uchar>(point) == 255)
+				if (m_cameras[c].getForegroundImage().at<uchar>(point) == 255)
 				{
 					++camera_counter;
 				}
@@ -190,11 +173,11 @@ void Reconstructor::update()
 		{
 			m_scalar_field[v].a = 1.0f;
 #pragma omp critical //push_back is critical
-			visible_voxels.push_back(voxel);
+			visible_voxels.push_back(v);
 		}
 	}
 
-	m_visible_voxels.insert(m_visible_voxels.end(), visible_voxels.begin(), visible_voxels.end());
+	m_visible_voxels_indices.insert(m_visible_voxels_indices.end(), visible_voxels.begin(), visible_voxels.end());
 }
 
 } /* namespace nl_uu_science_gmt */

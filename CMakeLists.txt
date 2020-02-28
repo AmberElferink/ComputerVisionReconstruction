@@ -42,6 +42,7 @@ find_package(OpenMP COMPONENTS CXX REQUIRED)
 # 
 # #############################################
 
+add_subdirectory(libs)
 add_subdirectory(apps)
 add_subdirectory(thirdparty/glad)
 add_subdirectory(thirdparty/imgui-1.75)
@@ -57,14 +58,9 @@ set(SOURCE_FILES
 	src/graphics/Texture.cpp
 	src/graphics/Ui.cpp
 	src/controllers/ArcBall.cpp
-	src/controllers/Camera.cpp
 	src/controllers/Renderer.cpp
-	src/controllers/Reconstructor.cpp
 	src/controllers/Scene3DRenderer.cpp
-	src/controllers/ForegroundOptimizer.cpp
-	src/controllers/ForegroundOptimizer.h
 	src/main.cpp
-	src/utilities/General.cpp
 	src/VoxelReconstruction.cpp)
 
 #############################################
@@ -80,6 +76,7 @@ foreach(CAMERA cam1 cam2 cam3 cam4)
 	list(APPEND FILES_TO_COPY data/${CAMERA}/video.avi)
 	list(APPEND FILES_TO_COPY data/${CAMERA}/checkerboard.avi)
 	list(APPEND VIDEOS data/${CAMERA}/video.avi)
+	list(APPEND CHECKERBOARDS data/${CAMERA}/checkerboard.avi)
 	list(APPEND BACKGROUNDS data/${CAMERA}/background.avi)
 	list(APPEND INTRINSICS data/${CAMERA}/intrinsics.avi)
 endforeach()
@@ -141,6 +138,39 @@ foreach(asset ${INTRINSICS})
 	list(APPEND SOURCE_FILES ${asset_output})
 endforeach()
 
+# Tell cmake to generate boardcorners.xml by first averaging checkerboard.avi files
+foreach(asset ${CHECKERBOARDS})
+	get_filename_component(asset_directory ${asset} DIRECTORY)
+	get_filename_component(asset_name_we ${asset} NAME_WE)
+
+	# Average the checkboard video to image
+	set(checkerboard_image ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/${asset_name_we}.png)
+	add_custom_command(
+		OUTPUT ${checkerboard_image}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND background_averager ${asset} ${checkerboard_image}
+		DEPENDS ${asset}
+	)
+
+	# Have user calibrate by hand
+	set(corners ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/boardcorners.xml)
+	add_custom_command(
+		OUTPUT ${corners}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND hand_calibration ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${checkerboard_image} ${corners}
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${checkerboard_image}
+	)
+
+	set(asset_output ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/config.xml)
+	add_custom_command(
+		OUTPUT ${asset_output}
+		COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}
+		COMMAND extrinsics_configurator ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/intrinsics.xml ${checkerboard_image} ${corners} ${asset_output}
+		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/data/checkerboard.xml ${CMAKE_CURRENT_BINARY_DIR}/${asset_directory}/intrinsics.xml ${checkerboard_image} ${corners}
+	)
+	list(APPEND SOURCE_FILES ${asset_output})
+endforeach()
+
 #############################################
 add_executable (${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
 
@@ -150,9 +180,8 @@ target_link_libraries (${CMAKE_PROJECT_NAME}
 		glad
 		imgui
 		glm
+		reconstructor
 		OpenGL::GL
-		Threads::Threads
-		OpenMP::OpenMP_CXX
 		${SDL2_LIBRARIES}
 		${OpenCV_LIBS})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIRS})

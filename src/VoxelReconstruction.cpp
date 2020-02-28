@@ -9,19 +9,19 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/highgui/highgui_c.h>
-#include <stddef.h>
 #include <cassert>
 #include <iostream>
-#include <sstream>
+#include <utility>
 
 #include "controllers/Renderer.h"
-#include "controllers/Reconstructor.h"
+#include <Reconstructor.h>
 #include "controllers/Scene3DRenderer.h"
 #include "utilities/General.h"
 
 using namespace nl_uu_science_gmt;
-using namespace std;
 using namespace cv;
+
+constexpr std::string_view VERSION = "2.5";
 
 namespace nl_uu_science_gmt
 {
@@ -29,74 +29,59 @@ namespace nl_uu_science_gmt
 /**
  * Main constructor, initialized all cameras
  */
-VoxelReconstruction::VoxelReconstruction(const string &dp, const int cva) :
-		m_data_path(dp), m_cam_views_amount(cva)
+VoxelReconstruction::VoxelReconstruction(std::filesystem::path dp, int cam_views_amount) :
+		m_data_path(std::move(dp))
 {
-	const string cam_path = m_data_path + "cam";
-
-	for (int v = 0; v < m_cam_views_amount; ++v)
+	for (int v = 0; v < cam_views_amount; ++v)
 	{
-		stringstream full_path;
-		full_path << cam_path << (v + 1) << PATH_SEP;
+		auto full_path = m_data_path / ("cam" + std::to_string(v + 1));
 
 		/*
 		 * Assert that there's a background image or video file and \
 		 * that there's a video file
 		 */
-		std::cout << full_path.str() << General::BackgroundImageFile << std::endl;
-		std::cout << full_path.str() << General::VideoFile << std::endl;
+		std::cout << full_path / General::BackgroundImageFile << std::endl;
+		std::cout << full_path / General::VideoFile << std::endl;
 		assert(
-			General::fexists(full_path.str() + General::BackgroundImageFile)
+			std::filesystem::exists(full_path / General::BackgroundImageFile)
 			&&
-			General::fexists(full_path.str() + General::VideoFile)
+			std::filesystem::exists(full_path /General::VideoFile)
 		);
 
 		/*
 		 * Assert that if there's no config.xml file, there's an intrinsics file and
 		 * a checkerboard video to create the extrinsics from
 		 */
-		assert(
-			(!General::fexists(full_path.str() + General::ConfigFile) ?
-				General::fexists(full_path.str() + General::IntrinsicsFile) &&
-					General::fexists(full_path.str() + General::CheckerboadVideo)
-			 : true)
-		);
+		assert(std::filesystem::exists(full_path / General::ConfigFile));
 
-		m_cam_views.push_back(new Camera(full_path.str(), General::ConfigFile, v));
+		m_cam_views.emplace_back(full_path, General::ConfigFile.data(), v);
 	}
 }
 
-/**
- * Main destructor, cleans up pointer vector memory of the cameras
- */
-VoxelReconstruction::~VoxelReconstruction()
-{
-	for (size_t v = 0; v < m_cam_views.size(); ++v)
-		delete m_cam_views[v];
-}
+VoxelReconstruction::~VoxelReconstruction() = default;
 
 /**
  * What you can hit
  */
 void VoxelReconstruction::showKeys()
 {
-	cout << "VoxelReconstruction v" << VERSION << endl << endl;
-	cout << "Use these keys:" << endl;
-	cout << "q       : Quit" << endl;
-	cout << "p       : Pause" << endl;
-	cout << "b       : Frame back" << endl;
-	cout << "n       : Next frame" << endl;
-	cout << "r       : Rotate voxel space" << endl;
-	cout << "s       : Show/hide arcball wire sphere (Linux only)" << endl;
-	cout << "v       : Show/hide voxel space box" << endl;
-	cout << "g       : Show/hide ground plane" << endl;
-	cout << "c       : Show/hide cameras" << endl;
-	cout << "i       : Show/hide camera numbers (Linux only)" << endl;
-	cout << "o       : Show/hide origin" << endl;
-	cout << "t       : Top view" << endl;
-	cout << "1,2,3,4 : Switch camera #" << endl << endl;
-	cout << "Zoom with the scrollwheel while on the 3D scene" << endl;
-	cout << "Rotate the 3D scene with left click+drag" << endl << endl;
+	std::cout << "VoxelReconstruction v" << VERSION << std::endl << std::endl;
+	std::cout << "Use these keys:" << std::endl;
+	std::cout << "q       : Quit" << std::endl;
+	std::cout << "p       : Pause" << std::endl;
+	std::cout << "b       : Frame back" << std::endl;
+	std::cout << "n       : Next frame" << std::endl;
+	std::cout << "r       : Rotate voxel space" << std::endl;
+	std::cout << "s       : Show/hide arcball wire sphere (Linux only)" << std::endl;
+	std::cout << "v       : Show/hide voxel space box" << std::endl;
+	std::cout << "g       : Show/hide ground plane" << std::endl;
+	std::cout << "c       : Show/hide cameras" << std::endl;
+	std::cout << "i       : Show/hide camera numbers (Linux only)" << std::endl;
+	std::cout << "o       : Show/hide origin" << std::endl;
+	std::cout << "t       : Top view" << std::endl;
+	std::cout << "1,2,3,4 : Switch camera #" << std::endl << std::endl;
+	std::cout << "Zoom with the scrollwheel while on the 3D scene" << std::endl;
+	std::cout << "Rotate the 3D scene with left click+drag" << std::endl << std::endl;
 }
 
 /**
@@ -107,23 +92,19 @@ void VoxelReconstruction::showKeys()
  */
 void VoxelReconstruction::run(int argc, char** argv)
 {
-	for (int v = 0; v < m_cam_views_amount; ++v)
+	for (auto& v : m_cam_views)
 	{
-		bool has_cam = Camera::detExtrinsics(m_cam_views[v]->getDataPath(), General::CheckerboadVideo,
-				General::IntrinsicsFile, m_cam_views[v]->getCamPropertiesFile());
-		assert(has_cam);
-		if (has_cam) has_cam = m_cam_views[v]->initialize();
-		assert(has_cam);
+		assert(v.initialize(General::BackgroundImageFile, General::VideoFile));
 	}
 
 	destroyAllWindows();
-	namedWindow(VIDEO_WINDOW, CV_WINDOW_KEEPRATIO);
+	namedWindow(VIDEO_WINDOW.data(), CV_WINDOW_KEEPRATIO);
 
 	Reconstructor reconstructor(m_cam_views);
 	Scene3DRenderer scene3d(reconstructor, m_cam_views);
 	Renderer glut(scene3d);
 
-	glut.initialize(SCENE_WINDOW.c_str(), argc, argv);
+	glut.initialize(SCENE_WINDOW.data(), argc, argv);
 }
 
 } /* namespace nl_uu_science_gmt */

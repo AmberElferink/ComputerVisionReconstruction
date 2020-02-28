@@ -9,7 +9,7 @@
 #define RECONSTRUCTOR_H_
 
 #include <opencv2/core/core.hpp>
-#include <stddef.h>
+#include <cstddef>
 #include <vector>
 #include <glm/vec4.hpp>
 
@@ -27,32 +27,31 @@ public:
 	 */
 	struct Voxel
 	{
-		int x, y, z;                               // Coordinates
+		cv::Point3i coordinate;                    // Coordinates
 		cv::Scalar color;                          // Color
 		std::vector<cv::Point> camera_projection;  // Projection location for camera[c]'s FoV (2D)
 		std::vector<int> valid_camera_projection;  // Flag if camera projection is in camera[c]'s FoV
 	};
 
 private:
-	const std::vector<Camera*> &m_cameras;  // vector of pointers to cameras
+	const std::vector<Camera> &m_cameras;  // vector of pointers to cameras
 	const int m_height;                     // Cube half-space height from floor to ceiling
 	const int m_step;                       // Step size (space between voxels)
 
-	std::vector<cv::Point3f*> m_corners;    // Cube half-space corner locations
+	std::vector<cv::Point3f> m_corners ;    // Cube half-space corner locations
 
 	cv::Vec3w m_voxels_dimension;           // Voxel count in each dimension
 	size_t m_voxels_amount;                 // Voxel count
 	cv::Size m_plane_size;                  // Camera FoV plane WxH
 
-	std::vector<Voxel*> m_voxels;           // Pointer vector to all voxels in the half-space
-	std::vector<Voxel*> m_visible_voxels;   // Pointer vector to all visible voxels
-	std::vector<glm::vec4> m_scalar_field;      // Values for each point in the half-space
+	std::vector<Voxel> m_voxels;           // Pointer vector to all voxels in the half-space
+	std::vector<uint32_t> m_visible_voxels_indices;   // Pointer vector to all visible voxels
+	std::vector<glm::vec4> m_scalar_field; // Values for each point in the half-space
 
 	void initialize();
 
 public:
-	Reconstructor(
-			const std::vector<Camera*> &);
+	explicit Reconstructor(const std::vector<Camera>&);
 	virtual ~Reconstructor();
 
 	void update();
@@ -77,12 +76,12 @@ public:
 		return m_step;
 	}
 
-	const std::vector<Voxel*>& getVisibleVoxels() const
+	const std::vector<uint32_t>& getVisibleVoxelIndices() const
 	{
-		return m_visible_voxels;
+		return m_visible_voxels_indices;
 	}
 
-	const std::vector<Voxel*>& getVoxels() const
+	const std::vector<Voxel>& getVoxels() const
 	{
 		return m_voxels;
 	}
@@ -92,19 +91,7 @@ public:
 		return m_scalar_field;
 	}
 
-	void setVisibleVoxels(
-			const std::vector<Voxel*>& visibleVoxels)
-	{
-		m_visible_voxels = visibleVoxels;
-	}
-
-	void setVoxels(
-			const std::vector<Voxel*>& voxels)
-	{
-		m_voxels = voxels;
-	}
-
-	const std::vector<cv::Point3f*>& getCorners() const
+	const std::vector<cv::Point3f>& getCorners() const
 	{
 		return m_corners;
 	}
