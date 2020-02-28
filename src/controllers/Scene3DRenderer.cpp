@@ -11,6 +11,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
+#include <ClusterLabeler.h>
 #include <ForegroundOptimizer.h>
 
 #include "../utilities/General.h"
@@ -28,6 +29,7 @@ namespace nl_uu_science_gmt
  */
 Scene3DRenderer::Scene3DRenderer(Reconstructor &r, vector<Camera> &cs)
 	: m_foregroundOptimizer(std::make_unique<ForegroundOptimizer>(4))
+	, m_clusterLabeler(std::make_unique<ClusterLabeler>())
 	, m_reconstructor(r)
 	, m_cameras(cs)
 	, m_num(4)
@@ -141,18 +143,51 @@ Scene3DRenderer::~Scene3DRenderer() = default;
  */
 bool Scene3DRenderer::processFrame()
 {
-	for (auto & m_camera : m_cameras)
+	for (auto & camera : m_cameras)
 	{
 		if (m_current_frame == m_previous_frame + 1)
 		{
-			m_camera.advanceVideoFrame();
+			camera.advanceVideoFrame();
 		}
 		else if (m_current_frame != m_previous_frame)
 		{
-			m_camera.getVideoFrame(m_current_frame);
+			camera.getVideoFrame(m_current_frame);
 		}
-		processForeground(m_camera);
+		processForeground(camera);
 	}
+
+	m_reconstructor.update();
+
+	constexpr uint8_t NUM_CONTOURS = 4;
+	constexpr uint8_t NUM_RETRIES = 10;
+
+	auto [centers, labels] = m_clusterLabeler->FindClusters(
+		NUM_CONTOURS,
+		NUM_RETRIES,
+		m_reconstructor.getVoxels(),
+		m_reconstructor.getVisibleVoxelIndices());
+
+//	std::vector<std::vector<cv::Mat>> masks;
+//	for (auto & camera : m_cameras)
+//	{
+//		masks.push_back(m_clusterLabeler->ProjectTShirt(
+//			NUM_CONTOURS,
+//			camera,
+//			m_reconstructor.getVoxelSize() * 0.5f,
+//			m_reconstructor.getVoxels(),
+//			m_reconstructor.getVisibleVoxelIndices(),
+//			labels));
+//	}
+
+	// TODO: Change the order of the colors based on the color modeling
+	std::vector<glm::vec4> colors = {
+		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f),
+		glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
+		glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
+	};
+	m_reconstructor.color(labels, colors);
+
 	return true;
 }
 

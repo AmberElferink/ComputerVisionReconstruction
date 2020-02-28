@@ -1254,7 +1254,6 @@ void Renderer::update()
 	{
 		// If the current frame is different from the last iteration update stuff
 		m_scene3d.processFrame();
-		m_scene3d.getReconstructor().update();
 		m_scene3d.setPreviousFrame(m_scene3d.getCurrentFrame());
 	}
 	else if (m_scene3d.getHThreshold() != m_scene3d.getPHThreshold() || m_scene3d.getSThreshold() != m_scene3d.getPSThreshold()
@@ -1262,7 +1261,6 @@ void Renderer::update()
 	{
 		// Update the scene if one of the HSV sliders was moved (when the video is paused)
 		m_scene3d.processFrame();
-		m_scene3d.getReconstructor().update();
 
 		m_scene3d.setPHThreshold(m_scene3d.getHThreshold());
 		m_scene3d.setPSThreshold(m_scene3d.getSThreshold());

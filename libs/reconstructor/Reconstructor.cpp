@@ -112,7 +112,6 @@ void Reconstructor::initialize()
 				voxel->coordinate.x = x;
 				voxel->coordinate.y = y;
 				voxel->coordinate.z = z;
-				voxel->color = Scalar((float)x / (float)xR, (float)y / (float)yR, (float)z / (float)zR);
 				voxel->camera_projection = std::vector<Point>(m_cameras.size());
 				voxel->valid_camera_projection = std::vector<int>(m_cameras.size(), 0);
 
@@ -151,9 +150,6 @@ void Reconstructor::update()
 		int camera_counter = 0;
 		const Voxel* voxel = &m_voxels[v];
 		m_scalar_field[v].a = 0.0f;
-		m_scalar_field[v].r = voxel->color[0];
-		m_scalar_field[v].g = voxel->color[1];
-		m_scalar_field[v].b = voxel->color[2];
 		for (size_t c = 0; c < m_cameras.size(); ++c)
 		{
 			if (voxel->valid_camera_projection[c])
@@ -178,6 +174,22 @@ void Reconstructor::update()
 	}
 
 	m_visible_voxels_indices.insert(m_visible_voxels_indices.end(), visible_voxels.begin(), visible_voxels.end());
+}
+
+void Reconstructor::color(const std::vector<int>& labels, const std::vector<glm::vec4>& colors)
+{
+	int32_t v;
+//#pragma omp parallel for schedule(runtime) private(v) shared(labels) shared(colors)
+	for (v = 0; v < (int32_t) m_visible_voxels_indices.size(); ++v)
+	{
+		int label = labels[v];
+		auto index = m_visible_voxels_indices[v];
+		const glm::vec4& color = colors[label];
+		assert(label < colors.size());
+		m_scalar_field[index].r = color[0];
+		m_scalar_field[index].g = color[1];
+		m_scalar_field[index].b = color[2];
+	}
 }
 
 } /* namespace nl_uu_science_gmt */

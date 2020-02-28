@@ -95,13 +95,17 @@ int main(int argc, char* argv[])
         reconstructor.getVoxels(),
         reconstructor.getVisibleVoxelIndices());
 
-    auto masks = labeler.ProjectTShirt(
-        NUM_CONTOURS,
-        cameras,
-        reconstructor.getVoxelSize() * 0.5f,
-        reconstructor.getVoxels(),
-        reconstructor.getVisibleVoxelIndices(),
-        labels);
+    std::vector<std::vector<cv::Mat>> masks;
+    for (const auto& camera : cameras)
+    {
+        masks.push_back(labeler.ProjectTShirt(
+            NUM_CONTOURS,
+            camera,
+            reconstructor.getVoxelSize() * 0.5f,
+            reconstructor.getVoxels(),
+            reconstructor.getVisibleVoxelIndices(),
+            labels));
+    }
 
     cv::FileStorage fs;
     fs.open(data_path / "centers.xml", cv::FileStorage::WRITE);
