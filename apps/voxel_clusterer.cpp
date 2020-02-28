@@ -1,10 +1,10 @@
 #include <cstdlib>
-#include <Camera.h>
-#include <Reconstructor.h>
 #include <iostream>
 #include <opencv2/imgproc.hpp>
-#include <ForegroundOptimizer.h>
 #include <opencv2/highgui.hpp>
+#include <Camera.h>
+#include <Reconstructor.h>
+#include <ForegroundOptimizer.h>
 
 using nl_uu_science_gmt::Camera;
 using nl_uu_science_gmt::Reconstructor;
@@ -106,6 +106,10 @@ int main(int argc, char* argv[])
             auto person_index = labels[i];
             auto voxel_index = reconstructor.getVisibleVoxelIndices()[i];
             auto& voxel = reconstructor.getVoxels()[voxel_index];
+            if (voxel.coordinate.z < 800.0f || voxel.coordinate.z > 1400.0f)
+            {
+                continue;
+            }
             for (uint32_t j = 0; j < cameras.size(); ++j)
             {
                 auto& camera = cameras[j];
@@ -143,6 +147,17 @@ int main(int argc, char* argv[])
                             {cv::IMWRITE_PNG_COMPRESSION, 0});
             }
         }
+
+//        for (uint32_t i = 0; i < cameras.size(); ++i)
+//        {
+//            for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
+//            {
+//                cv::imshow("mask #" + std::to_string(j), masks[j + i * NUM_CONTOURS]);
+//            }
+//            cv::imshow("camera image", cameras[i].getFrame());
+//            cv::waitKey();
+//        }
+
     }
 
     return EXIT_FAILURE;
