@@ -9,6 +9,7 @@
 
 using nl_uu_science_gmt::Camera;
 using nl_uu_science_gmt::ClusterLabeler;
+using nl_uu_science_gmt::ForegroundOptimizer;
 using nl_uu_science_gmt::Reconstructor;
 
 #define SHOW_RESULTS 1
@@ -27,6 +28,9 @@ int main(int argc, char* argv[])
     std::filesystem::path background_file_path = "background.png";
     std::filesystem::path video_file_path = "video.avi";
 
+	std::vector<cv::Mat> hsvImages; //one per camera
+	hsvImages.reserve(NUM_VIEWS);
+
     for (uint32_t i = 0; i < NUM_VIEWS; ++i)
     {
         auto full_path = data_path / ("cam" + std::to_string(i + 1));
@@ -42,6 +46,7 @@ int main(int argc, char* argv[])
         }
         cv::Mat hsv_image;
         cvtColor(camera.getFrame(), hsv_image, cv::COLOR_BGR2HSV);  // from BGR to HSV color space
+		hsvImages.push_back(hsv_image.clone()); //deep copy
 
         std::vector<cv::Mat> channels;
         cv::split(hsv_image, channels);  // Split the HSV-channels for further analysis
@@ -84,15 +89,23 @@ int main(int argc, char* argv[])
         reconstructor.getVoxels(),
         reconstructor.getVisibleVoxelIndices());
 
-    auto masks = labeler.ProjectTShirt(
-        NUM_CONTOURS,
-        cameras,
-        reconstructor.getVoxelSize() * 0.5f,
-        reconstructor.getVoxels(),
-        reconstructor.getVisibleVoxelIndices(),
-        labels);
+    std::vector<std::vector<cv::Mat>> masks;
+    for (const auto& camera : cameras)
+    {
+        masks.push_back(labeler.ProjectTShirt(
+            NUM_CONTOURS,
+            camera,
+            reconstructor.getVoxelSize() * 0.5f,
+            reconstructor.getVoxels(),
+            reconstructor.getVisibleVoxelIndices(),
+            labels));
+    }
 
 	labeler.CleanupMasks(masks);
+	std::vector<std::vector<cv::Mat>> cutouts;
+	labeler.CreateColorScheme(masks, hsvImages, cutouts);
+
+
 
 
         cv::FileStorage fs;
@@ -123,10 +136,14 @@ int main(int argc, char* argv[])
     {
         for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
         {
-            cv::imshow("mask #" + std::to_string(j), masks[i][j]);
+            //cv::imshow("mask #" + std::to_string(j), masks[i][j]);
+			cvtColor(cutouts[i][j], cutouts[i][j], cv::COLOR_HSV2BGR);
+            cv::imshow("mask #" + std::to_string(j), cutouts[i][j]);
         }
-        cv::imshow("camera image", cameras[i].getFrame());
-        cv::waitKey();
+        //cv::imshow("camera image", cameras[i].getFrame());
+        //cv::waitKey();
+		//cv::imshow("camera image", cutouts[i][j]);
+		cv::waitKey();
     }
 #endif // SHOW_RESULTS
 

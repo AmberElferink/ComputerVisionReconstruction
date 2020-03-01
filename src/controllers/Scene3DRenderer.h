@@ -19,14 +19,17 @@
 #include "ArcBall.h"
 #include "Camera.h"
 #include "Reconstructor.h"
-#include "ForegroundOptimizer.h"
 
 namespace nl_uu_science_gmt
 {
 
+class ClusterLabeler;
+class ForegroundOptimizer;
+
 class Scene3DRenderer
 {
-	std::unique_ptr<ForegroundOptimizer> foregroundOptimizer;
+	std::unique_ptr<ForegroundOptimizer> m_foregroundOptimizer;
+	std::unique_ptr<ClusterLabeler>      m_clusterLabeler;
 	Reconstructor &m_reconstructor;          // Reference to Reconstructor
 	std::vector<Camera> &m_cameras;  // Reference to camera's vector
 	const int m_num;                        // Floor grid scale
@@ -59,7 +62,7 @@ class Scene3DRenderer
 	bool m_paused;                            // flag status is pause video
 	bool m_rotate;                            // flag auto rotate GL scene
 
-	long m_number_of_frames;                  // number of video frames
+	int m_number_of_frames;                  // number of video frames
 	int m_current_frame;                      // current frame index
 	int m_previous_frame;                     // previously drawn frame index
 
@@ -72,12 +75,11 @@ class Scene3DRenderer
 	uint8_t m_ps_threshold;                   // Saturation threshold value at previous iteration (update awareness)
 	uint8_t m_v_threshold;                    // Value threshold number for background subtraction
 	uint8_t m_pv_threshold;                   // Value threshold value at previous iteration (update awareness)
-	int m_s_thresholdMaxContourIncrease;		  // max increases in seperate blobs detected betweewn threshold operations until termination for S
 	int m_thresholdMaxNoise;		  // max increases in seperate blobs detected betweewn threshold operations until termination for V
 
 
 	// edge points of the virtual ground floor grid
-	std::vector<std::vector<cv::Point3i*> > m_floor_grid;
+	std::vector<std::vector<cv::Point3i> > m_floor_grid;
 
 	void createFloorGrid();
 
@@ -320,7 +322,7 @@ public:
 		return m_aspect_ratio;
 	}
 
-	const std::vector<std::vector<cv::Point3i*> >& getFloorGrid() const
+	const std::vector<std::vector<cv::Point3i> >& getFloorGrid() const
 	{
 		return m_floor_grid;
 	}

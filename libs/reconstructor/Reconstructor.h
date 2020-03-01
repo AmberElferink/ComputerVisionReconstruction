@@ -42,6 +42,7 @@ public:
 	virtual ~Reconstructor();
 
 	void update();
+	void color(const std::vector<int>& labels, const std::vector<glm::vec4>& colors);
 
 	cv::Vec3w getVoxelDimension() const
 	{

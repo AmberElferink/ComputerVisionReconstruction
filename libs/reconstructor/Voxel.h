@@ -12,7 +12,6 @@ namespace nl_uu_science_gmt
 struct Voxel
 {
   cv::Point3i coordinate;                     // Coordinates
-  cv::Scalar color;                           // Color
   std::vector <cv::Point> camera_projection;  // Projection location for camera[c]'s FoV (2D)
   std::vector<int> valid_camera_projection;   // Flag if camera projection is in camera[c]'s FoV
 };

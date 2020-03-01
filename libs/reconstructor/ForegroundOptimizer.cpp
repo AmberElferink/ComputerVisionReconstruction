@@ -1,6 +1,8 @@
 #include "ForegroundOptimizer.h"
 #include <opencv2/imgproc/imgproc.hpp>
 
+using nl_uu_science_gmt::ForegroundOptimizer;
+
 ForegroundOptimizer::ForegroundOptimizer(int nrContoursTracked)
 	: nrContoursTracked(nrContoursTracked)
 {

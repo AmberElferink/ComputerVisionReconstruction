@@ -2,6 +2,8 @@
 #include <vector>
 #include <opencv2/core/mat.hpp>
 
+namespace nl_uu_science_gmt
+{
 class ForegroundOptimizer
 {
 	//sorted from high to low
@@ -26,3 +28,4 @@ public:
 	explicit ForegroundOptimizer(int nrContoursTracked);
 
 };
+} /* namespace nl_uu_science_gmt */
