@@ -17,7 +17,7 @@ using nl_uu_science_gmt::Voxel;
 
 
 
-std::vector<cv::ml::EM> ems;
+std::vector<std::vector<cv::Ptr<cv::ml::EM>>> ems;
 
 std::pair<cv::Mat, std::vector<int>> ClusterLabeler::FindClusters(uint8_t num_clusters, uint8_t num_retries, const std::vector<Voxel> &voxels, const std::vector<uint32_t> &indices)
 {
@@ -85,24 +85,96 @@ void ClusterLabeler::CleanupMasks(std::vector<std::vector<cv::Mat>> &masks)
 		}
 	}
 }
-
+#pragma optimize("", off)
+//most useful opencv example: https://github.com/opencv/opencv/blob/master/samples/cpp/em.cpp
 //example EM in use: http://seiya-kumada.blogspot.com/2013/03/em-algorithm-practice-by-opencv.html
 //documentation EM: https://docs.opencv.org/3.4/d1/dfb/classcv_1_1ml_1_1EM.html#ae3f12147ba846a53601b60c784ee263d
 //opencv samle EM: https://github.com/opencv/opencv/blob/master/samples/cpp/em.cpp
 void ClusterLabeler::CreateColorScheme(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& cutouts)
 {
-	cutouts.reserve(masks.size());
-	for (int i = 0; i < masks.size(); i++) //loop over cameras
-	{
-		std::vector<cv::Mat> camMasks;
-		for (int j = 0; j < masks[i].size();j++) //loop over masks
-		{
-			cv::Mat cutout;
-			cv::bitwise_and(hsvImages[i], hsvImages[i], cutout, masks[i][j]);
-			camMasks.push_back(cutout.clone());
-			//ems[i].tr
 
+	using namespace cv;
+	using namespace cv::ml;
+	using namespace std;
+
+	Ptr<EM> em = EM::create();
+
+	//cv::Mat cutout;
+	//cv::bitwise_and(hsvImages[0], hsvImages[0], cutout, masks[0][0]);
+	//cv::Mat reshaped_cutout = cutout.reshape(1, cutout.rows * cutout.cols);
+	//cv::Mat samples;
+	//reshaped_cutout.convertTo(samples, CV_64FC1, 1.0 / 255.0);
+
+	em->setClustersNumber(4);
+	em->setCovarianceMatrixType(EM::COV_MAT_SPHERICAL);
+	em->setTermCriteria(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 300, 0.1));
+	
+	cv::Mat& mask = masks[0][0];
+	int whitePixels = sum(mask)[0] / 255;
+	Mat cutout( Size(whitePixels, 1), CV_64FC3);
+	int counter = 0;
+	for (int i = 0; i < mask.rows; i++)
+	{
+		for (int j = 0; j < mask.cols; j++)
+		{
+			if (mask.at<uchar>(i, j))
+			{
+				cutout.at<Vec3d>(0, counter) = ((Vec3d) hsvImages[0].at<Vec3b>(i, j))/ 255.0;
+				//cutout.at<double>(counter, 1, 1) = ((double) hsvImages[0].at<uchar>(i, j, 1)) / 255.0;
+				//cutout.at<double>(counter, 1, 2) = ((double) hsvImages[0].at<uchar>(i, j, 2)) / 255.0;
+				counter++;
+			}
 		}
-		cutouts.push_back(camMasks);
 	}
+
+	Mat reshaped_cutout = cutout.reshape(1, 3).t(); //put 1 pixel value per row (each sample is 1 pixel)
+	cv::Mat likelyhoods; //do log(likelyhood[nr] to find the likelyhood it belongs to the cluster (log(1.7) = 0.25 for example)
+	cv::Mat labels; //
+	em->trainEM(reshaped_cutout, likelyhoods, labels, cv::noArray());
+
+
+	//el 0 is likelyhood, el 1 is Index
+	cv::Mat prob;
+	float result = em->predict(reshaped_cutout, prob);
+	int w = 0;
+
+	//cutouts.reserve(masks.size());
+	//ems.resize(masks.size());
+	//for (int i = 0; i < masks.size(); i++) //loop over cameras
+	//{
+	//	std::vector<cv::Mat> camMasks;
+	//	for (int j = 0; j < masks[i].size();j++) //loop over masks
+	//	{
+	//		cv::Mat cutout;
+	//		cv::bitwise_and(hsvImages[i], hsvImages[i], cutout, masks[i][j]);
+	//		camMasks.push_back(cutout.clone());
+
+	//		cv::Mat reshaped_cutout = cutout.reshape(1, cutout.rows * cutout.cols);
+	//		cv::Mat samples;
+	//		reshaped_cutout.convertTo(samples, CV_64FC1, 1.0 / 255.0);
+
+
+	//		auto& em = ems[i].emplace_back(EM::create()); //transfer ownership of the Ptr to ems
+	//		em->setClustersNumber(4);
+	//		em->setCovarianceMatrixType(EM::COV_MAT_SPHERICAL);
+	//		em->setTermCriteria(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 300, 0.1));
+	//		
+	//	
+	//		
+
+	//		cv::Mat likelyhoods;
+	//		cv::Mat labels;
+	//		ems[i][j]->trainEM(samples, likelyhoods, labels, cv::noArray());
+	//		
+
+	//		//el 0 is likelyhood, el 1 is Index
+	//		Vec2d likelyhoodIndex = ems[i][j]->predict2(samples, noArray());
+
+	//		int w = 0;
+	//		
+	//	}
+	//	cutouts.push_back(camMasks);
+	//}
 }
+
+#pragma optimize("", on)
