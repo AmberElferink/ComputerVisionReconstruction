@@ -102,24 +102,23 @@ int main(int argc, char* argv[])
     }
 
 	labeler.CleanupMasks(masks);
-	std::vector<std::vector<cv::Mat>> cutouts;
-	labeler.CreateColorScheme(masks, hsvImages, cutouts);
+
+	std::vector<std::vector<cv::Mat>> reshaped_cutouts; // vector per camera, vector per mask, cut out color pixels in a list
+	labeler.CreateColorScheme(masks, hsvImages, reshaped_cutouts);
 
 
-
-
-        cv::FileStorage fs;
-        fs.open((data_path / "centers.xml").u8string(), cv::FileStorage::WRITE);
-        if (fs.isOpened())
-        {
-            fs << "Centers" << centers;
-            fs.release();
-        }
-        else
-        {
-            std::cerr << "[extrinsics_configurator] Error: Unable to k-means centers to: " << data_path / "centers.xml" << std::endl;
-            return EXIT_FAILURE;
-        }
+    cv::FileStorage fs;
+    fs.open((data_path / "centers.xml").u8string(), cv::FileStorage::WRITE);
+    if (fs.isOpened())
+    {
+        fs << "Centers" << centers;
+        fs.release();
+    }
+    else
+    {
+        std::cerr << "[extrinsics_configurator] Error: Unable to k-means centers to: " << data_path / "centers.xml" << std::endl;
+        return EXIT_FAILURE;
+    }
 
     for (uint32_t i = 0; i < cameras.size(); ++i)
     {
@@ -132,19 +131,9 @@ int main(int argc, char* argv[])
     }
 
 #if SHOW_RESULTS
-    for (uint32_t i = 0; i < cameras.size(); ++i)
-    {
-        for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
-        {
-            //cv::imshow("mask #" + std::to_string(j), masks[i][j]);
-			cvtColor(cutouts[i][j], cutouts[i][j], cv::COLOR_HSV2BGR);
-            cv::imshow("mask #" + std::to_string(j), cutouts[i][j]);
-        }
-        //cv::imshow("camera image", cameras[i].getFrame());
-        //cv::waitKey();
-		//cv::imshow("camera image", cutouts[i][j]);
-		cv::waitKey();
-    }
+	labeler.CheckEMS(reshaped_cutouts);
+	std::vector<std::vector<cv::Mat>> cutouts; //black surrounded masked images
+	labeler.ShowMaskCutouts(masks, hsvImages, cutouts);
 #endif // SHOW_RESULTS
 
     return EXIT_SUCCESS;
