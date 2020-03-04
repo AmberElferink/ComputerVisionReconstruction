@@ -6,6 +6,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/ml/ml.hpp> //EM include, use with cv::ml::EM
 
+#include <unordered_set> //to keep track of which masks have been matched
+
 #include "Camera.h"
 
 using nl_uu_science_gmt::Camera;
@@ -250,6 +252,153 @@ void ClusterLabeler::TrainEMS(std::vector<std::vector<cv::Mat>>& masks, std::vec
 	}
 }
 
+//given a matrix with indices for the sorted rows, reconstruct the sorted matrix from the original
+cv::Mat ReconstructFromRowIndices(cv::Mat matrix, cv::Mat matrixRowIndices)
+{
+	using namespace cv;
+	Mat sortedRowMatrix(matrix.rows, matrix.cols, CV_32FC1);
+	for (int row = 0; row < matrixRowIndices.rows; row++)
+	{
+		for (int col = 0; col < matrixRowIndices.cols; col++)
+		{
+			int puckIDIndex = matrixRowIndices.at<int>(row, col);
+			float distance = matrix.at<int>(row, puckIDIndex);
+			sortedRowMatrix.at<int>(row, col) = distance;
+		}
+	}
+	return sortedRowMatrix;
+}
+
+//input a CV_8UC1 matrix with row indices for instance 3 rows 4 cols
+//input the sorted col indices (only 1 column) in this case 4.
+//at these indexes is the minimum distance between the new puck and the old puck. 
+//it zips those two together to a CV_8UC2 matrix.
+cv::Mat ZipIndices(cv::Mat matrix, cv::Mat matrixRowIndices, cv::Mat matrixColIndices)
+{
+	using namespace cv;
+	Mat combinedIndices(matrix.rows, matrix.cols, CV_8UC2);
+
+	//zip the indices together
+	for (int i = 0; i < matrixRowIndices.cols; i++)
+	{
+		for (int j = 0; j < matrixRowIndices.rows; j++)
+		{
+			//The number corresponds to the indexes that need to be linked to eachother.
+			int colSortedIndice = matrixColIndices.at<int>(j, i);
+			//since you continue with column sort after the row, you should get the rowindex corresponding to the column index
+			int rowSortedIndice = matrixRowIndices.at<int>(colSortedIndice, i);
+			combinedIndices.at<Vec2b>(j, i)[0] = rowSortedIndice;
+			combinedIndices.at<Vec2b>(j, i)[1] = colSortedIndice;
+		}
+	}
+	return combinedIndices;
+}
+
+//Input Mat with CV_8UC2. It will be printed like this:
+//[(1,3), (4,6), (6,4);
+// (3,4), (4,4), (2,5);
+// (2,8), (7,2), (5,2);]
+void PrintZippedIndices(cv::Mat combinedIndices)
+{
+	std::string print = "[";
+	for (int j = 0; j < combinedIndices.rows; j++)
+	{
+		for (int i = 0; i < combinedIndices.cols; i++)
+		{
+			print += "(" + std::to_string(combinedIndices.at<cv::Vec2b>(j, i)[0]) + ", " + std::to_string(combinedIndices.at<cv::Vec2b>(j, i)[1]) + "), ";
+		}
+		print += "; \n ";
+	}
+	print += "]";
+	std::cout << print << std::endl;
+}
+
+//input matrix must be of type CV_8UC1
+//outputs a matrix with type CV_8UC2 with the indices of sortIdx.
+cv::Mat GetSortedMatIndices(cv::Mat matrix, bool verbalDebug)
+{
+	using namespace cv;
+
+	Mat matrixRowIndices(matrix.rows, matrix.cols, CV_8UC1);
+	sortIdx(matrix, matrixRowIndices, SORT_EVERY_ROW + SORT_DESCENDING);
+
+	if (verbalDebug)
+		std::cout << "row indices" << std::endl << matrixRowIndices << std::endl << std::endl;
+
+	Mat sortedRowMatrix = ReconstructFromRowIndices(matrix, matrixRowIndices);
+
+	if (verbalDebug)
+		std::cout << "sorted row matrix" << std::endl << sortedRowMatrix << std::endl << std::endl;
+
+	Mat colIndices(matrix.rows, matrix.cols, CV_8UC1);
+	sortIdx(sortedRowMatrix, colIndices, SORT_EVERY_COLUMN + SORT_DESCENDING);
+
+	if (verbalDebug)
+		std::cout << "col indices" << std::endl << colIndices << std::endl << std::endl;
+
+	Mat zippedIndices = ZipIndices(matrix, matrixRowIndices, colIndices);
+
+	if (verbalDebug)
+	{
+		std::cout << "zippedIndices: " << std::endl;
+		PrintZippedIndices(zippedIndices);
+	}
+
+	return zippedIndices;
+}
+
+
+
+//checks if a unsigned set contains a certain element
+bool uSetContains(std::unordered_set<int> set, int toFind)
+{
+	if (set.find(toFind) == set.end())
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
+//calculates the centers closest to the current pucks and updates their position.
+//also removes old pucks and adds newly undetected pucks.
+void MatchMaskToEM(cv::Mat& probabilities)
+{
+
+	//each number can only be present once, the numbers are not ordered.
+	//faster than set or vector
+	std::unordered_set<int> usedMasks;
+	std::unordered_set<int> usedEMs;
+
+	cv::Mat zippedIndices = GetSortedMatIndices(probabilities, true);
+
+	//loop through all zipped columns  and rows to link pucks to eachother
+	for (int i = 0; i < zippedIndices.cols; i++)
+	{
+		for (int j = 0; j < zippedIndices.rows; j++)
+		{
+			int maskNr = zippedIndices.at<cv::Vec2b>(j, i)[0]; //this was sorted per row, which is horizontal, so the sorting gives the COLUMN you need, which is the mask
+			int emNr = zippedIndices.at<cv::Vec2b>(j, i)[1]; //this was sorted per column, which is vertical, so the sorting gives the ROW you need, which is the model
+
+			if (uSetContains(usedMasks, maskNr) || uSetContains(usedEMs, emNr))
+			{
+				// if the current center is already assigned to another puck, continue to the next
+				continue;
+			}
+			else
+			{
+				std::cout << "mask: " << maskNr << " matched with: emnr: " << emNr << std::endl;
+				usedMasks.insert(maskNr);
+				usedEMs.insert(emNr);
+			}
+		}
+	}
+
+	int w = 0;
+}
+
 
 void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::vector<std::vector<cv::Mat>>& masks_per_camera)
 {
@@ -292,6 +441,9 @@ void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::v
 	}
 
 	probs_matching_masks = probs_matching_masks / m_numCameras;
+
+	MatchMaskToEM(probs_matching_masks);
 	int w = 0;
 }
+
 
