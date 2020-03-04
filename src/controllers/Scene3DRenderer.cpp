@@ -213,19 +213,19 @@ bool Scene3DRenderer::processFrame()
 	m_reconstructor.color(labels, swizzled_colors);
 
 	// TODO: Change the order of the centers based on the color modeling
-	m_cluster_traces[0][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[0]] * 0.1;
-	m_cluster_traces[1][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[1]] * 0.1;
-	m_cluster_traces[2][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[2]] * 0.1;
-	m_cluster_traces[3][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[3]] * 0.1;
+	m_cluster_traces[maskToEmNr[0]][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[0] * 0.1;
+	m_cluster_traces[maskToEmNr[1]][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[1] * 0.1;
+	m_cluster_traces[maskToEmNr[2]][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[2] * 0.1;
+	m_cluster_traces[maskToEmNr[3]][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[3] * 0.1;
 
 	m_cluster_traces[0][m_current_frame].x += 250;
-	m_cluster_traces[0][m_current_frame].y += 250;
+	m_cluster_traces[0][m_current_frame].y = 250 - m_cluster_traces[0][m_current_frame].y;
 	m_cluster_traces[1][m_current_frame].x += 250;
-	m_cluster_traces[1][m_current_frame].y += 250;
+	m_cluster_traces[1][m_current_frame].y = 250 - m_cluster_traces[1][m_current_frame].y;
 	m_cluster_traces[2][m_current_frame].x += 250;
-	m_cluster_traces[2][m_current_frame].y += 250;
+	m_cluster_traces[2][m_current_frame].y = 250 - m_cluster_traces[2][m_current_frame].y;
 	m_cluster_traces[3][m_current_frame].x += 250;
-	m_cluster_traces[3][m_current_frame].y += 250;
+	m_cluster_traces[3][m_current_frame].y = 250 - m_cluster_traces[3][m_current_frame].y;
 
 	Mat display = Mat(cv::Size(500, 500), CV_8UC3, Scalar::all(255));
 
