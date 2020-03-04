@@ -418,10 +418,13 @@ void setCorrectMaskEMnr(const std::unordered_set<int>& usedMasks, int& maskNr, s
 	
 }
 
-//calculates the centers closest to the current pucks and updates their position.
-//also removes old pucks and adds newly undetected pucks.
-void MatchMaskToEM(cv::Mat& probabilities)
+//matches the highest probable colors found int the image to the color models
+//it returns a vector, at index model there is a mask
+std::vector<int> MatchMaskToEM(cv::Mat& probabilities)
 {
+	std::vector<int> output(probabilities.cols);
+
+
 	std::cout << probabilities << std::endl;
 	//each number can only be present once, the numbers are not ordered.
 	//faster than set or vector
@@ -454,18 +457,19 @@ void MatchMaskToEM(cv::Mat& probabilities)
 		//update mask and em number accounting for  deleted rows and columns in rounds BEFORE this one
 		setCorrectMaskEMnr(usedMasks, maskNr, usedEMs, emNr);
 
-		std::cout << "mask: " << maskNr << " matched with: emnr: " << emNr << std::endl;
+		//std::cout << "mask: " << maskNr << " matched with: emnr: " << emNr << std::endl;
+		output[maskNr] = emNr;
 
 		usedMasks.insert(maskNr);
 		usedEMs.insert(emNr);
 
 	}
 
-	int w = 0;
+	return output;
 }
 
 
-void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::vector<std::vector<cv::Mat>>& masks_per_camera)
+std::vector<int> ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::vector<std::vector<cv::Mat>>& masks_per_camera)
 {
 	using namespace cv;
 	using namespace cv::ml;
@@ -492,7 +496,7 @@ void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::v
 				{
 					Vec2d results = models[j]->predict2(cutout.at<Vec3d>(pixel), noArray());
 					float prob = exp(results[0]);
-					if (prob > 0.25)
+					if (prob > 0.15)
 					{
 						correctVotes++;
 					}
@@ -507,8 +511,9 @@ void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::v
 
 	probs_matching_masks = probs_matching_masks / m_numCameras;
 
-	MatchMaskToEM(probs_matching_masks);
-	int w = 0;
+	vector<int> modelEmMatch = MatchMaskToEM(probs_matching_masks);
+
+	return modelEmMatch;
 }
 
 

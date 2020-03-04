@@ -185,7 +185,7 @@ bool Scene3DRenderer::processFrame()
 			labels));
 	}
 
-	m_clusterLabeler->PredictEMS(m_cameras, masks);
+	vector<int> maskToEmNr = m_clusterLabeler->PredictEMS(m_cameras, masks);
 
 	// TODO: Change the order of the colors based on the color modeling
 	std::vector<glm::vec4> colors = {
@@ -194,7 +194,15 @@ bool Scene3DRenderer::processFrame()
 		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f),
 		glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
 	};
-	m_reconstructor.color(labels, colors);
+
+	std::vector<glm::vec4> swizzled_colors(4);
+
+	for (int i = 0; i < 4; i++)
+	{
+		swizzled_colors[i] = colors[maskToEmNr[i]];
+	}
+	
+	m_reconstructor.color(labels, swizzled_colors);
 
 	return true;
 }

@@ -28,7 +28,7 @@ public:
 	void CleanupMasks(std::vector<std::vector<cv::Mat>>& masks);
 	void ShowMaskCutouts(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& cutouts);
 	void TrainEMS(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& reshaped_cutouts);
-	void PredictEMS(const std::vector<Camera>& cameras, const std::vector<std::vector<cv::Mat>>& masks);
+	std::vector<int> PredictEMS(const std::vector<Camera>& cameras, const std::vector<std::vector<cv::Mat>>& masks);
 	void InitializeEMS();
 	void CheckEMS(std::vector<std::vector<cv::Mat>>& reshaped_cutouts);
 	void SaveEMS(const std::filesystem::path& dataPath);
