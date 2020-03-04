@@ -77,6 +77,7 @@ class Scene3DRenderer
 	uint8_t m_pv_threshold;                   // Value threshold value at previous iteration (update awareness)
 	int m_thresholdMaxNoise;		  // max increases in seperate blobs detected betweewn threshold operations until termination for V
 
+	std::vector<cv::Point2f> m_cluster_traces[4];
 
 	// edge points of the virtual ground floor grid
 	std::vector<std::vector<cv::Point3i> > m_floor_grid;

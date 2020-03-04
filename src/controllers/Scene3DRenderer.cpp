@@ -11,6 +11,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/imgproc/types_c.h>
+#include <opencv2/plot.hpp>
 #include <ClusterLabeler.h>
 #include <ForegroundOptimizer.h>
 #include <opencv2/ml/ml.hpp>
@@ -68,6 +69,12 @@ Scene3DRenderer::Scene3DRenderer(Reconstructor &r, vector<Camera> &cs)
 	, m_v_threshold(48)
 	, m_pv_threshold(m_v_threshold)
 	, m_thresholdMaxNoise(15)
+	, m_cluster_traces{
+		std::vector<cv::Point2f>(m_number_of_frames),
+		std::vector<cv::Point2f>(m_number_of_frames),
+		std::vector<cv::Point2f>(m_number_of_frames),
+		std::vector<cv::Point2f>(m_number_of_frames),
+	}
 {
 	m_clusterLabeler->LoadEMS(m_cameras.front().getDataPath() / "..");
 
@@ -185,6 +192,7 @@ bool Scene3DRenderer::processFrame()
 			labels));
 	}
 
+	m_clusterLabeler->CleanupMasks(masks);
 	vector<int> maskToEmNr = m_clusterLabeler->PredictEMS(m_cameras, masks);
 
 	// TODO: Change the order of the colors based on the color modeling
@@ -203,6 +211,33 @@ bool Scene3DRenderer::processFrame()
 	}
 	
 	m_reconstructor.color(labels, swizzled_colors);
+
+	// TODO: Change the order of the centers based on the color modeling
+	m_cluster_traces[0][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[0]] * 0.1;
+	m_cluster_traces[1][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[1]] * 0.1;
+	m_cluster_traces[2][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[2]] * 0.1;
+	m_cluster_traces[3][m_current_frame] = reinterpret_cast<cv::Point2f*>(centers.data)[maskToEmNr[3]] * 0.1;
+
+	m_cluster_traces[0][m_current_frame].x += 250;
+	m_cluster_traces[0][m_current_frame].y += 250;
+	m_cluster_traces[1][m_current_frame].x += 250;
+	m_cluster_traces[1][m_current_frame].y += 250;
+	m_cluster_traces[2][m_current_frame].x += 250;
+	m_cluster_traces[2][m_current_frame].y += 250;
+	m_cluster_traces[3][m_current_frame].x += 250;
+	m_cluster_traces[3][m_current_frame].y += 250;
+
+	Mat display = Mat(cv::Size(500, 500), CV_8UC3, Scalar::all(255));
+
+	for (uint32_t i = 2; i < m_current_frame; ++i)
+	{
+		cv::line(display, m_cluster_traces[0][i - 1], m_cluster_traces[0][i], cv::Scalar(colors[0][2] * 255, colors[0][1] * 255, colors[0][0] * 255));
+		cv::line(display, m_cluster_traces[1][i - 1], m_cluster_traces[1][i], cv::Scalar(colors[1][2] * 255, colors[1][1] * 255, colors[1][0] * 255));
+		cv::line(display, m_cluster_traces[2][i - 1], m_cluster_traces[2][i], cv::Scalar(colors[2][2] * 255, colors[2][1] * 255, colors[2][0] * 255));
+		cv::line(display, m_cluster_traces[3][i - 1], m_cluster_traces[3][i], cv::Scalar(colors[3][2] * 255, colors[3][1] * 255, colors[3][0] * 255));
+	}
+
+	cv::imshow("path", display);
 
 	return true;
 }

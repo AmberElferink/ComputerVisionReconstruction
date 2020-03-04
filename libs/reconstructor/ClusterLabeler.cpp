@@ -89,8 +89,6 @@ void ClusterLabeler::CleanupMasks(std::vector<std::vector<cv::Mat>> &masks)
 	}
 }
 
-#pragma optimize("", off)
-
 void ClusterLabeler::ShowMaskCutouts(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& blackendCutouts)
 {
 	for (int i = 0; i < masks.size(); i++) //loop over cameras

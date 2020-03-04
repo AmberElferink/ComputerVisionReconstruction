@@ -27,7 +27,7 @@ elseif (TARGET SDL2::SDL2)
 endif()
 find_package(glm REQUIRED)
 find_package(OpenGL 1 REQUIRED)
-find_package(OpenCV COMPONENTS core highgui imgproc calib3d REQUIRED)
+find_package(OpenCV COMPONENTS core highgui imgproc calib3d ml REQUIRED)
 find_package(Threads)
 find_package(OpenMP COMPONENTS CXX REQUIRED)
 

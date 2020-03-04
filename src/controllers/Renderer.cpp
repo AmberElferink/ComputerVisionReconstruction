@@ -22,7 +22,6 @@
 
 #include "ArcBall.h"
 #include "Camera.h"
-#include "Reconstructor.h"
 #include "Scene3DRenderer.h"
 #include "../graphics/Buffer.h"
 #include "../graphics/Context.h"
