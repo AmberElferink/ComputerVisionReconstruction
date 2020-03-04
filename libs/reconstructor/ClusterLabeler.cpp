@@ -344,7 +344,7 @@ cv::Mat GetSortedMatIndices(cv::Mat matrix, bool verbalDebug)
 		PrintZippedIndices(zippedIndices);
 	}
 
-	return zippedIndices;
+	return zippedIndices.clone();
 }
 
 
@@ -362,38 +362,103 @@ bool uSetContains(std::unordered_set<int> set, int toFind)
 	}
 }
 
+//delete col row: https://stackoverflow.com/questions/29696805/what-is-the-best-way-to-remove-a-row-or-col-from-a-cv-mat
+void DeleteRow(const cv::Mat& matIn, cv::Mat& matOut, int row)
+{
+	matOut = cv::Mat(cv::Size(matIn.cols, matIn.rows - 1), matIn.type());
+	if (row > 0) // Copy everything above that one row.
+	{
+		cv::Rect rect(0, 0, matIn.cols, row);
+		matIn(rect).copyTo(matOut(rect));
+	}
+
+	if (row < matIn.rows - 1) // Copy everything below that one row.
+	{
+		cv::Rect rect1(0, row + 1, matIn.cols, matIn.rows - row - 1);
+		cv::Rect rect2(0, row, matIn.cols, matIn.rows - row - 1);
+		matIn(rect1).copyTo(matOut(rect2));
+	}
+}
+
+void DeleteCol(const cv::Mat& matIn, cv::Mat& matOut, int col)
+{
+	matOut = cv::Mat(cv::Size(matIn.cols - 1, matIn.rows), matIn.type());
+	if (col > 0) // Copy everything left of that one column.
+	{
+		cv::Rect rect(0, 0, col, matIn.rows);
+		matIn(rect).copyTo(matOut(rect));
+	}
+
+	if (col < matIn.cols - 1) // Copy everything right of that one column.
+	{
+		cv::Rect rect1(col + 1, 0, matIn.cols - col - 1, matIn.rows);
+		cv::Rect rect2(col, 0, matIn.cols - col - 1, matIn.rows);
+		matIn(rect1).copyTo(matOut(rect2));
+	}
+}
+
+//increase the mask/emNr accounting for deleted rows
+void setCorrectMaskEMnr(const std::unordered_set<int>& usedMasks, int& maskNr, std::unordered_set<int>& usedEMs, int& emNr)
+{
+	bool updating = true;
+	while (updating) // if one of the numbers had been increased, keep going. Otherwise return
+	{
+		if (uSetContains(usedMasks, maskNr))
+		{
+			maskNr++;
+			continue;
+		}
+		if (uSetContains(usedEMs, emNr))
+		{
+			emNr++;
+			continue;
+		}
+		return;
+	}
+	
+}
+
 //calculates the centers closest to the current pucks and updates their position.
 //also removes old pucks and adds newly undetected pucks.
 void MatchMaskToEM(cv::Mat& probabilities)
 {
-
+	std::cout << probabilities << std::endl;
 	//each number can only be present once, the numbers are not ordered.
 	//faster than set or vector
 	std::unordered_set<int> usedMasks;
 	std::unordered_set<int> usedEMs;
 
-	cv::Mat zippedIndices = GetSortedMatIndices(probabilities, true);
+	cv::Mat zippedIndices = GetSortedMatIndices(probabilities, false);
 
 	//loop through all zipped columns  and rows to link pucks to eachother
-	for (int i = 0; i < zippedIndices.cols; i++)
+	while(probabilities.cols > 0)
 	{
-		for (int j = 0; j < zippedIndices.rows; j++)
-		{
-			int maskNr = zippedIndices.at<cv::Vec2b>(j, i)[0]; //this was sorted per row, which is horizontal, so the sorting gives the COLUMN you need, which is the mask
-			int emNr = zippedIndices.at<cv::Vec2b>(j, i)[1]; //this was sorted per column, which is vertical, so the sorting gives the ROW you need, which is the model
+		PrintZippedIndices(zippedIndices);
 
-			if (uSetContains(usedMasks, maskNr) || uSetContains(usedEMs, emNr))
-			{
-				// if the current center is already assigned to another puck, continue to the next
-				continue;
-			}
-			else
-			{
-				std::cout << "mask: " << maskNr << " matched with: emnr: " << emNr << std::endl;
-				usedMasks.insert(maskNr);
-				usedEMs.insert(emNr);
-			}
+		int maskNr = zippedIndices.at<cv::Vec2b>(0, 0)[0]; //this was sorted per row, which is horizontal, so the sorting gives the COLUMN you need, which is the mask
+		int emNr = zippedIndices.at<cv::Vec2b>(0, 0)[1]; //this was sorted per column, which is vertical, so the sorting gives the ROW you need, which is the model
+
+		//delete corresponding mask and em row so they don't get matched anymore
+		cv::Mat nextProbabilities1;
+		DeleteCol(probabilities, nextProbabilities1, maskNr);
+		cv::Mat nextProbabilities2;
+		DeleteRow(nextProbabilities1, nextProbabilities2, emNr);
+
+		probabilities = nextProbabilities2;
+
+		if (nextProbabilities2.cols > 0)
+		{
+			zippedIndices = GetSortedMatIndices(nextProbabilities2, false);
 		}
+
+		//update mask and em number accounting for  deleted rows and columns in rounds BEFORE this one
+		setCorrectMaskEMnr(usedMasks, maskNr, usedEMs, emNr);
+
+		std::cout << "mask: " << maskNr << " matched with: emnr: " << emNr << std::endl;
+
+		usedMasks.insert(maskNr);
+		usedEMs.insert(emNr);
+
 	}
 
 	int w = 0;
