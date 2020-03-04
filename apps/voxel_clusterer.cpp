@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
     Reconstructor reconstructor(cameras);
     reconstructor.update();
 
-    ClusterLabeler labeler;
+    ClusterLabeler labeler(NUM_CONTOURS, NUM_VIEWS);
     auto [centers, labels] = labeler.FindClusters(
         NUM_CONTOURS,
         NUM_RETRIES,
@@ -102,9 +102,9 @@ int main(int argc, char* argv[])
     }
 
 	labeler.CleanupMasks(masks);
-
+	labeler.InitializeEMS();
 	std::vector<std::vector<cv::Mat>> reshaped_cutouts; // vector per camera, vector per mask, cut out color pixels in a list
-	labeler.CreateColorScheme(masks, hsvImages, reshaped_cutouts);
+	labeler.TrainEMS(masks, hsvImages, reshaped_cutouts);
 
 	labeler.SaveEMS(data_path);
 

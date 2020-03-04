@@ -28,8 +28,8 @@ class ForegroundOptimizer;
 
 class Scene3DRenderer
 {
-	std::unique_ptr<ForegroundOptimizer> m_foregroundOptimizer;
 	std::unique_ptr<ClusterLabeler>      m_clusterLabeler;
+	std::unique_ptr<ForegroundOptimizer> m_foregroundOptimizer;
 	Reconstructor &m_reconstructor;          // Reference to Reconstructor
 	std::vector<Camera> &m_cameras;  // Reference to camera's vector
 	const int m_num;                        // Floor grid scale

@@ -13,23 +13,27 @@
 #include <opencv2/imgproc/types_c.h>
 #include <ClusterLabeler.h>
 #include <ForegroundOptimizer.h>
-
+#include <opencv2/ml/ml.hpp>
 #include "../utilities/General.h"
 
 
 using namespace std;
 using namespace cv;
 
+
+
 namespace nl_uu_science_gmt
 {
+	std::vector<std::vector<cv::Ptr<cv::ml::EM>>> ems;
 
 /**
  * Constructor
  * Scene properties class (mostly called by Glut)
  */
 Scene3DRenderer::Scene3DRenderer(Reconstructor &r, vector<Camera> &cs)
-	: m_foregroundOptimizer(std::make_unique<ForegroundOptimizer>(4))
-	, m_clusterLabeler(std::make_unique<ClusterLabeler>())
+	:
+	  m_clusterLabeler(std::make_unique<ClusterLabeler>())
+	, m_foregroundOptimizer(std::make_unique<ForegroundOptimizer>(m_clusterLabeler->getNumClusters()))
 	, m_reconstructor(r)
 	, m_cameras(cs)
 	, m_num(4)
@@ -65,6 +69,8 @@ Scene3DRenderer::Scene3DRenderer(Reconstructor &r, vector<Camera> &cs)
 	, m_pv_threshold(m_v_threshold)
 	, m_thresholdMaxNoise(15)
 {
+	m_clusterLabeler->LoadEMS(m_cameras.front().getDataPath() / "..");
+
 	// Read the checkerboard properties (XML)
 	FileStorage fs;
 	fs.open((m_cameras.front().getDataPath() / ".." / General::CBConfigFile).u8string(), FileStorage::READ);
@@ -167,17 +173,19 @@ bool Scene3DRenderer::processFrame()
 		m_reconstructor.getVoxels(),
 		m_reconstructor.getVisibleVoxelIndices());
 
-//	std::vector<std::vector<cv::Mat>> masks;
-//	for (auto & camera : m_cameras)
-//	{
-//		masks.push_back(m_clusterLabeler->ProjectTShirt(
-//			NUM_CONTOURS,
-//			camera,
-//			m_reconstructor.getVoxelSize() * 0.5f,
-//			m_reconstructor.getVoxels(),
-//			m_reconstructor.getVisibleVoxelIndices(),
-//			labels));
-//	}
+	std::vector<std::vector<cv::Mat>> masks;
+	for (auto & camera : m_cameras)
+	{
+		masks.push_back(m_clusterLabeler->ProjectTShirt(
+			NUM_CONTOURS,
+			camera,
+			m_reconstructor.getVoxelSize() * 0.5f,
+			m_reconstructor.getVoxels(),
+			m_reconstructor.getVisibleVoxelIndices(),
+			labels));
+	}
+
+	m_clusterLabeler->PredictEMS(m_cameras, masks);
 
 	// TODO: Change the order of the colors based on the color modeling
 	std::vector<glm::vec4> colors = {

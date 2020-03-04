@@ -136,7 +136,7 @@ void ClusterLabeler::CheckEMS(std::vector<std::vector<cv::Mat>>& reshaped_cutout
 	
 }
 
-void ClusterLabeler::SaveEMS(std::filesystem::path dataPath)
+void ClusterLabeler::SaveEMS(const std::filesystem::path& dataPath)
 {
 	for (int i = 0; i < ems.size(); i++)
 	{
@@ -149,34 +149,83 @@ void ClusterLabeler::SaveEMS(std::filesystem::path dataPath)
 	}
 }
 
-//most useful opencv example: https://github.com/opencv/opencv/blob/master/samples/cpp/em.cpp
-//example EM in use: http://seiya-kumada.blogspot.com/2013/03/em-algorithm-practice-by-opencv.html
-//documentation EM: https://docs.opencv.org/3.4/d1/dfb/classcv_1_1ml_1_1EM.html#ae3f12147ba846a53601b60c784ee263d
-//opencv samle EM: https://github.com/opencv/opencv/blob/master/samples/cpp/em.cpp
-void ClusterLabeler::CreateColorScheme(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& reshaped_cutouts)
+void ClusterLabeler::LoadEMS(const std::filesystem::path& dataPath)
+{
+	InitializeEMS();
+
+	for (int i = 0; i < m_numCameras; i++)
+	{
+		auto cameraPath = std::filesystem::path("cam" + std::to_string(i + 1));
+		for (int j = 0; j < m_numClusters; j++)
+		{
+			auto maskPath = std::filesystem::path("maskEM" + std::to_string(j + 1) + ".yml");
+			ems[i][j] = cv::ml::EM::load((dataPath / cameraPath / maskPath).u8string());
+		}
+	}
+}
+
+void ClusterLabeler::InitializeEMS()
 {
 
 	using namespace cv;
 	using namespace cv::ml;
 	using namespace std;
 
-	//One EM per T-shirt. Those are trained in this offline stage. Online EM.predict can be used to return the probability of the match 
-	ems.reserve(4);
-
-
-	ems.resize(masks.size());
+	ems.resize(m_numCameras);
 
 	//initialize the EMS
-	for (int i = 0; i < masks.size(); i++) //loop over cameras
+	for (int i = 0; i < m_numCameras; i++) //loop over cameras
 	{
-		for (int j = 0; j < masks[i].size(); j++) //loop over masks
+		for (int j = 0; j < m_numClusters; j++) //loop over masks
 		{
 			Ptr<EM>& em = ems[i].emplace_back(EM::create()); //transfer ownership of the Ptr to ems
-			em->setClustersNumber(4);
+			em->setClustersNumber(m_numClusters);
 			em->setCovarianceMatrixType(EM::COV_MAT_SPHERICAL);
 			em->setTermCriteria(TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 300, 0.1));
 		}
 	}
+}
+
+cv::Mat ClusterLabeler::GetCutout(const cv::Mat& mask, const cv::Mat& hsv_image)
+{
+
+	using namespace cv;
+	using namespace cv::ml;
+	using namespace std;
+
+	int whitePixels = sum(mask)[0] / 255;
+	//cutout contains one row, three channels, (for h, s and v) of all pixel values that are on the white part of the mask.
+	Mat cutout(Size(whitePixels, 1), CV_64FC3);
+
+	int counter = 0;
+	for (int y = 0; y < mask.rows; y++)
+	{
+		for (int x = 0; x < mask.cols; x++)
+		{
+			if (mask.at<uchar>(y, x)) //if the mask is white here
+			{
+				cutout.at<Vec3d>(0, counter) = ((Vec3d)hsv_image.at<Vec3b>(y, x)) / 255.0; //add the normalized double pixel value to the cutout
+				counter++;
+			}
+		}
+	}
+
+	//contains three columns (h s and v), rows as many pixels as there were in the mask, only 1 channel
+	Mat reshaped_cutout = cutout.reshape(1, 3).t(); //put 1 pixel value per row (each sample is 1 pixel) 
+
+	return reshaped_cutout;
+}
+
+//most useful opencv example: https://github.com/opencv/opencv/blob/master/samples/cpp/em.cpp
+//example EM in use: http://seiya-kumada.blogspot.com/2013/03/em-algorithm-practice-by-opencv.html
+//documentation EM: https://docs.opencv.org/3.4/d1/dfb/classcv_1_1ml_1_1EM.html#ae3f12147ba846a53601b60c784ee263d
+//opencv samle EM: https://github.com/opencv/opencv/blob/master/samples/cpp/em.cpp
+void ClusterLabeler::TrainEMS(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& reshaped_cutouts)
+{
+
+	using namespace cv;
+	using namespace cv::ml;
+	using namespace std;
 
 	for (int i = 0; i < masks.size(); i++) //loop over cameras
 	{
@@ -184,26 +233,9 @@ void ClusterLabeler::CreateColorScheme(std::vector<std::vector<cv::Mat>>& masks,
 		for (int j = 0; j < masks[i].size(); j++) //loop over masks
 		{
 			cv::Mat& mask = masks[i][j];
-			int whitePixels = sum(mask)[0] / 255;
+			
 
-			//cutout contains one row, three channels, (for h, s and v) of all pixel values that are on the white part of the mask.
-			Mat cutout(Size(whitePixels, 1), CV_64FC3);
-
-			int counter = 0;
-			for (int y = 0; y < mask.rows; y++)
-			{
-				for (int x = 0; x < mask.cols; x++)
-				{
-					if (mask.at<uchar>(y, x)) //if the mask is white here
-					{
-						cutout.at<Vec3d>(0, counter) = ((Vec3d)hsvImages[i].at<Vec3b>(y, x)) / 255.0; //add the normalized double pixel value to the cutout
-						counter++;
-					}
-				}
-			}
-
-			//contains three columns (h s and v), rows as many pixels as there were in the mask, only 1 channel
-			Mat reshaped_cutout = cutout.reshape(1, 3).t(); //put 1 pixel value per row (each sample is 1 pixel) 
+			cv::Mat reshaped_cutout = GetCutout(mask, hsvImages[i]);
 
 			//those two are not in use, but just nice to look at
 			cv::Mat likelyhoods; //do log(likelyhood[nr] to find the likelyhood it belongs to the cluster (log(1.7) = 0.25 for example)
@@ -218,4 +250,39 @@ void ClusterLabeler::CreateColorScheme(std::vector<std::vector<cv::Mat>>& masks,
 	}
 }
 
-#pragma optimize("", on)
+
+void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::vector<std::vector<cv::Mat>>& masks_per_camera)
+{
+	using namespace cv;
+	using namespace cv::ml;
+	using namespace std;
+
+	cv::Mat probs_matching_masks = cv::Mat::zeros(cv::Size(m_numClusters, m_numClusters), CV_32FC1);
+
+	for (int i = 0; i < ems.size(); i++) //loop over out vector (camera's), which is the same for ems and masks
+	{
+		auto& camera = cameras[i];
+		auto& models = ems[i];
+		auto& masks = masks_per_camera[i];
+		auto& frame = camera.getFrame();
+		cv::Mat hsv_image;
+		cv::cvtColor(frame, hsv_image, cv::COLOR_BGR2HSV);
+
+		for (int j = 0; j < models.size(); j++) //loop over inner trained EM vector ems
+		{
+			for (int maskI = 0; maskI < masks.size(); maskI++)
+			{
+				cv::Mat cutout = GetCutout(masks[maskI], hsv_image);
+
+				Vec2d results = models[j]->predict2(cutout.at<Vec3d>(0), noArray());
+				float prob = exp(results[0]);
+				//auto m = cv::mean(results); //mean for all put in pixel values
+				//float prob = cv::mean
+				probs_matching_masks.at<float>(j, maskI) += prob; //m[0];
+			}
+		}
+	}
+
+	probs_matching_masks = probs_matching_masks / m_numCameras;
+	int w = 0;
+}
