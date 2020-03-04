@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <filesystem>
 #include <tuple>
 #include <vector>
 #include <opencv2/core.hpp>
@@ -24,6 +25,7 @@ public:
 	void ShowMaskCutouts(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& cutouts);
 	void CreateColorScheme(std::vector<std::vector<cv::Mat>>& masks, std::vector<cv::Mat>& hsvImages, std::vector<std::vector<cv::Mat>>& reshaped_cutouts);
 	void CheckEMS(std::vector<std::vector<cv::Mat>>& reshaped_cutouts);
+	void SaveEMS(std::filesystem::path dataPath);
 };
 
 }

@@ -106,29 +106,7 @@ int main(int argc, char* argv[])
 	std::vector<std::vector<cv::Mat>> reshaped_cutouts; // vector per camera, vector per mask, cut out color pixels in a list
 	labeler.CreateColorScheme(masks, hsvImages, reshaped_cutouts);
 
-
-    cv::FileStorage fs;
-    fs.open((data_path / "centers.xml").u8string(), cv::FileStorage::WRITE);
-    if (fs.isOpened())
-    {
-        fs << "Centers" << centers;
-        fs.release();
-    }
-    else
-    {
-        std::cerr << "[extrinsics_configurator] Error: Unable to k-means centers to: " << data_path / "centers.xml" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    for (uint32_t i = 0; i < cameras.size(); ++i)
-    {
-        for (uint32_t j = 0; j < NUM_CONTOURS; ++ j)
-        {
-            cv::imwrite((data_path / ("cam" + std::to_string(i + 1)) / ("mask" + std::to_string(j + 1) + ".png")).u8string(),
-                        masks[i][j],
-                        {cv::IMWRITE_PNG_COMPRESSION, 0});
-        }
-    }
+	labeler.SaveEMS(data_path);
 
 #if SHOW_RESULTS
 	labeler.CheckEMS(reshaped_cutouts);

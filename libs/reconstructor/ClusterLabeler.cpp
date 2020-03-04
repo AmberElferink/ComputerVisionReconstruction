@@ -136,6 +136,19 @@ void ClusterLabeler::CheckEMS(std::vector<std::vector<cv::Mat>>& reshaped_cutout
 	
 }
 
+void ClusterLabeler::SaveEMS(std::filesystem::path dataPath)
+{
+	for (int i = 0; i < ems.size(); i++)
+	{
+		auto cameraPath = std::filesystem::path("cam" + std::to_string(i + 1));
+		for (int j = 0; j < ems[i].size(); j++)
+		{
+			auto maskPath = std::filesystem::path("maskEM" + std::to_string(j + 1) + ".yml");
+			ems[i][j]->save((dataPath / cameraPath / maskPath).u8string());
+		}
+	}
+}
+
 //most useful opencv example: https://github.com/opencv/opencv/blob/master/samples/cpp/em.cpp
 //example EM in use: http://seiya-kumada.blogspot.com/2013/03/em-algorithm-practice-by-opencv.html
 //documentation EM: https://docs.opencv.org/3.4/d1/dfb/classcv_1_1ml_1_1EM.html#ae3f12147ba846a53601b60c784ee263d
@@ -200,6 +213,8 @@ void ClusterLabeler::CreateColorScheme(std::vector<std::vector<cv::Mat>>& masks,
 			cam_cutouts.push_back(reshaped_cutout);
 		}
 		reshaped_cutouts.push_back(cam_cutouts);
+
+		
 	}
 }
 
