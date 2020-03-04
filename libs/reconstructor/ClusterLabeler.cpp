@@ -273,12 +273,20 @@ void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::v
 			for (int maskI = 0; maskI < masks.size(); maskI++)
 			{
 				cv::Mat cutout = GetCutout(masks[maskI], hsv_image);
+				int correctVotes = 0;
+				for (int pixel = 0; pixel < cutout.rows; pixel++)
+				{
+					Vec2d results = models[j]->predict2(cutout.at<Vec3d>(pixel), noArray());
+					float prob = exp(results[0]);
+					if (prob > 0.25)
+					{
+						correctVotes++;
+					}
+				}
+				int totalPixels = cv::sum(masks[maskI])[0] / 255;
+				float normalizedVotes = (float) correctVotes / (float) totalPixels;
 
-				Vec2d results = models[j]->predict2(cutout.at<Vec3d>(0), noArray());
-				float prob = exp(results[0]);
-				//auto m = cv::mean(results); //mean for all put in pixel values
-				//float prob = cv::mean
-				probs_matching_masks.at<float>(j, maskI) += prob; //m[0];
+				probs_matching_masks.at<float>(j, maskI) += normalizedVotes; //m[0];
 			}
 		}
 	}
@@ -286,3 +294,4 @@ void ClusterLabeler::PredictEMS(const std::vector<Camera>& cameras, const std::v
 	probs_matching_masks = probs_matching_masks / m_numCameras;
 	int w = 0;
 }
+
